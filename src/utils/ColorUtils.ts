@@ -8,7 +8,7 @@
  */
 export function generatePalette(baseHex: string, count: number): string[] {
 	const hsl = hexToHsl(baseHex);
-	if (!hsl) return Array(count).fill(baseHex);
+	if (!hsl) return Array(count).fill(baseHex) as string[];
 
 	const palette: string[] = [];
 	// If count is 1, just return the base

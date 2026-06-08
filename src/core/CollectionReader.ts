@@ -39,7 +39,7 @@ export class CollectionReader {
 			// In 'year' mode, if the user configured a yearFilterField, skip records
 			// that don't have the required value (e.g. played = true)
 			if (mode === 'year' && config.yearFilterField) {
-				const fv = fm[config.yearFilterField];
+				const fv = (fm as Record<string, unknown>)[config.yearFilterField];
 				if (config.yearFilterValue) {
 					const required = config.yearFilterValue.toLowerCase();
 					const actual = String(fv ?? '').toLowerCase();
@@ -52,8 +52,8 @@ export class CollectionReader {
 
 			// ── Date Filtering & Prorating ─────────────────────────────────────
 			if (mode === 'year') {
-				const startVal = config.startDateField ? fm[config.startDateField] : null;
-				const endVal = config.endDateField ? fm[config.endDateField] : null;
+				const startVal = config.startDateField ? (fm as Record<string, unknown>)[config.startDateField] : null;
+				const endVal = config.endDateField ? (fm as Record<string, unknown>)[config.endDateField] : null;
 
 				const dStart = startVal ? extractDate(startVal) : null;
 				const dEnd = endVal ? extractDate(endVal) : null;

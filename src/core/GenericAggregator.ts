@@ -9,7 +9,7 @@ class SimpleMathParser {
 	private index = 0;
 
 	constructor(expression: string) {
-		const tokenRegex = /Math\.(abs|min|max|round|floor|ceil)|[0-9]+(?:\.[0-9]+)?|[\+\-\*\/\(\),]/g;
+		const tokenRegex = /Math\.(abs|min|max|round|floor|ceil)|[0-9]+(?:\.[0-9]+)?|[+\-*\/(),]/g;
 		this.tokens = expression.match(tokenRegex) || [];
 	}
 

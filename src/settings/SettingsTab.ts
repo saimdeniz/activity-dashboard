@@ -141,9 +141,9 @@ export class DashboardSettingTab extends PluginSettingTab {
 					.onClick(async () => {
 						try {
 							const text = await navigator.clipboard.readText();
-							const parsed = JSON.parse(text);
+							const parsed = JSON.parse(text) as unknown;
 							validateSettings(parsed);
-							this.plugin.settings = { ...DEFAULT_SETTINGS, ...parsed };
+							this.plugin.settings = { ...DEFAULT_SETTINGS, ...(parsed as Partial<DashboardSettings>) };
 							await this.plugin.saveSettings();
 							new Notice('Settings imported from clipboard successfully! Reloading...');
 							this.display();
@@ -166,9 +166,9 @@ export class DashboardSettingTab extends PluginSettingTab {
 							reader.onload = async (evt) => {
 								try {
 									const content = evt.target?.result as string;
-									const parsed = JSON.parse(content);
+									const parsed = JSON.parse(content) as unknown;
 									validateSettings(parsed);
-									this.plugin.settings = { ...DEFAULT_SETTINGS, ...parsed };
+									this.plugin.settings = { ...DEFAULT_SETTINGS, ...(parsed as Partial<DashboardSettings>) };
 									await this.plugin.saveSettings();
 									new Notice('Settings imported successfully! Reloading...');
 									this.display();
@@ -513,54 +513,66 @@ function uid(): string {
 	return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 }
 
-function validateSettings(parsed: any): void {
+function validateSettings(parsed: unknown): void {
 	if (!parsed || typeof parsed !== 'object') {
 		throw new Error('Config must be a JSON object.');
 	}
-	if (!Array.isArray(parsed.collections)) {
+	const data = parsed as Record<string, unknown>;
+	if (!Array.isArray(data.collections)) {
 		throw new Error('Config is missing the "collections" list.');
 	}
-	for (let i = 0; i < parsed.collections.length; i++) {
-		const col = parsed.collections[i];
+	const collections = data.collections as unknown[];
+	for (let i = 0; i < collections.length; i++) {
+		const col = collections[i];
 		if (!col || typeof col !== 'object') {
 			throw new Error(`Collection at index ${i} is not a valid object.`);
 		}
-		if (typeof col.id !== 'string' || !col.id.trim()) {
+		const cMap = col as Record<string, unknown>;
+		const colId = cMap.id;
+		if (typeof colId !== 'string' || !colId.trim()) {
 			throw new Error(`Collection at index ${i} is missing a unique "id".`);
 		}
-		if (typeof col.name !== 'string' || !col.name.trim()) {
-			throw new Error(`Collection "${col.id || i}" is missing a valid "name".`);
+		const colName = cMap.name;
+		if (typeof colName !== 'string' || !colName.trim()) {
+			throw new Error(`Collection "${colId || i}" is missing a valid "name".`);
 		}
-		if (col.scanMode !== 'folder' && col.scanMode !== 'type-field') {
-			throw new Error(`Collection "${col.name}" has invalid scanMode: "${col.scanMode}".`);
+		const scanMode = cMap.scanMode;
+		if (scanMode !== 'folder' && scanMode !== 'type-field') {
+			throw new Error(`Collection "${colName}" has invalid scanMode: "${scanMode}".`);
 		}
-		if (col.libraryWidgets && !Array.isArray(col.libraryWidgets)) {
-			throw new Error(`Collection "${col.name}" "libraryWidgets" must be a list.`);
+		const libraryWidgets = cMap.libraryWidgets;
+		if (libraryWidgets && !Array.isArray(libraryWidgets)) {
+			throw new Error(`Collection "${colName}" "libraryWidgets" must be a list.`);
 		}
-		if (col.yearWidgets && !Array.isArray(col.yearWidgets)) {
-			throw new Error(`Collection "${col.name}" "yearWidgets" must be a list.`);
+		const yearWidgets = cMap.yearWidgets;
+		if (yearWidgets && !Array.isArray(yearWidgets)) {
+			throw new Error(`Collection "${colName}" "yearWidgets" must be a list.`);
 		}
 		
-		const validateWidget = (w: any, idx: number, listName: string) => {
+		const validateWidget = (w: unknown, idx: number, listName: string) => {
 			if (!w || typeof w !== 'object') {
-				throw new Error(`Widget at index ${idx} in "${col.name}" ${listName} is not a valid object.`);
+				throw new Error(`Widget at index ${idx} in "${colName}" ${listName} is not a valid object.`);
 			}
-			if (typeof w.id !== 'string' || !w.id.trim()) {
-				throw new Error(`Widget at index ${idx} in "${col.name}" ${listName} is missing a valid "id".`);
+			const wMap = w as Record<string, unknown>;
+			const wId = wMap.id;
+			if (typeof wId !== 'string' || !wId.trim()) {
+				throw new Error(`Widget at index ${idx} in "${colName}" ${listName} is missing a valid "id".`);
 			}
-			if (typeof w.type !== 'string' || !w.type.trim()) {
-				throw new Error(`Widget "${w.id}" in "${col.name}" is missing a valid "type".`);
+			const wType = wMap.type;
+			if (typeof wType !== 'string' || !wType.trim()) {
+				throw new Error(`Widget "${wId}" in "${colName}" is missing a valid "type".`);
 			}
-			if (typeof w.title !== 'string') {
-				throw new Error(`Widget "${w.id}" in "${col.name}" has an invalid "title".`);
+			const wTitle = wMap.title;
+			if (typeof wTitle !== 'string') {
+				throw new Error(`Widget "${wId}" in "${colName}" has an invalid "title".`);
 			}
 		};
 
-		if (col.libraryWidgets) {
-			col.libraryWidgets.forEach((w: any, idx: number) => validateWidget(w, idx, 'libraryWidgets'));
+		if (Array.isArray(libraryWidgets)) {
+			libraryWidgets.forEach((w: unknown, idx: number) => validateWidget(w, idx, 'libraryWidgets'));
 		}
-		if (col.yearWidgets) {
-			col.yearWidgets.forEach((w: any, idx: number) => validateWidget(w, idx, 'yearWidgets'));
+		if (Array.isArray(yearWidgets)) {
+			yearWidgets.forEach((w: unknown, idx: number) => validateWidget(w, idx, 'yearWidgets'));
 		}
 	}
 }

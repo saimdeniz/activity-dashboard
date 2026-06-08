@@ -1,4 +1,4 @@
-import type { CollectionConfig, DashboardSettings } from '../types';
+import type { CollectionConfig, DashboardSettings, WidgetConfig } from '../types';
 import { COLLECTION_COLORS } from '../types';
 
 const SCHEMA_VERSION = 3;
@@ -37,8 +37,8 @@ export function migrateSettings(loaded: Record<string, unknown> | null | undefin
 			return {
 				...c,
 				endDateField: c.endDateField || c.dateField,
-				libraryWidgets: JSON.parse(JSON.stringify(lib)), // Deep clone to break reference
-				yearWidgets: JSON.parse(JSON.stringify(yr)),
+				libraryWidgets: JSON.parse(JSON.stringify(lib)) as WidgetConfig[], // Deep clone to break reference
+				yearWidgets: JSON.parse(JSON.stringify(yr)) as WidgetConfig[],
 				widgets: [], // Clear old refs
 			};
 		});

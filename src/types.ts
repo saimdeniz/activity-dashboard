@@ -11,9 +11,12 @@ export interface WidgetSize {
 
 /** Legacy string size → new WidgetSize migration helper */
 export function migrateSize(raw: unknown): WidgetSize {
-	if (raw && typeof raw === 'object' && 'height' in (raw as any)) {
-		const s = raw as any;
-		return { height: s.height, span: s.span };
+	if (raw && typeof raw === 'object' && 'height' in raw && 'span' in raw) {
+		const s = raw as Record<string, unknown>;
+		return {
+			height: s.height === 'mini' ? 'mini' : 'small',
+			span: (typeof s.span === 'number' && [3, 4, 6, 9, 12].includes(s.span) ? s.span : 6) as 3 | 4 | 6 | 9 | 12,
+		};
 	}
 	const legacy = raw as string;
 	switch (legacy) {

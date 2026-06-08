@@ -97,7 +97,7 @@ export function renderActivityWidget(params: {
 		const borderColors = isLineOrRadar ? color : 'transparent';
 
 		chart = new Chart(canvas, {
-			type: isBar ? 'bar' : (chartType as any),
+			type: isBar ? 'bar' : (chartType as 'line' | 'bar' | 'pie' | 'doughnut'),
 			data: {
 				labels,
 				datasets: [{
@@ -115,7 +115,7 @@ export function renderActivityWidget(params: {
 				responsive: true,
 				maintainAspectRatio: false,
 				animation: false,
-				onClick: (e, activeElements) => {
+				onClick: (e, activeElements: import('chart.js').ActiveElement[]) => {
 					if (onDrilldown && activeElements.length > 0) {
 						const index = activeElements[0].index;
 						onDrilldown(labels[index]);
@@ -129,14 +129,14 @@ export function renderActivityWidget(params: {
 					},
 					tooltip: {
 						callbacks: {
-							label: (context: any) => {
+							label: (context: import('chart.js').TooltipItem<'line' | 'bar' | 'pie' | 'doughnut'>) => {
 								let label = context.dataset.label || '';
 								if (label) {
 									label += ': ';
 								}
 								const val = context.raw as number;
 								label += val;
-								const chartType = context.chart.config.type;
+								const chartType = (context.chart.config as { type?: string }).type;
 								if (chartType === 'pie' || chartType === 'doughnut') {
 									const dataArr = context.chart.data.datasets[0].data as number[];
 									const total = dataArr.reduce((a, b) => a + (Number(b) || 0), 0);

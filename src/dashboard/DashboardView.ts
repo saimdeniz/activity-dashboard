@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, setIcon, Modal, App, Notice, TFile, SliderComponent } from 'obsidian';
+import { ItemView, WorkspaceLeaf, setIcon, Modal, App, Notice, TFile, SliderComponent, Menu, MenuItem } from 'obsidian';
 import { Chart, registerables } from 'chart.js';
 import type {
 	CollectionConfig, DashboardSettings, OverviewItem,
@@ -20,13 +20,13 @@ export const VIEW_TYPE_DASHBOARD = 'dynamic-dashboard-view';
 
 class AddWidgetModal extends Modal {
 	private collection: CollectionConfig;
-	private onSave: (cfg: WidgetConfig) => void;
+	private onSave: (cfg: WidgetConfig) => void | Promise<void>;
 	private editing: WidgetConfig | null;
 
 	constructor(
 		app: App,
 		collection: CollectionConfig,
-		onSave: (cfg: WidgetConfig) => void,
+		onSave: (cfg: WidgetConfig) => void | Promise<void>,
 		editing: WidgetConfig | null = null,
 	) {
 		super(app);
@@ -313,7 +313,7 @@ class AddWidgetModal extends Modal {
 			const isChartType = widgetType === 'distribution' || widgetType === 'boolean' || widgetType === 'activity' || widgetType === 'ranking';
 			chartWrap.style.display = isChartType ? '' : 'none';
 			aggWrap.style.display   = (widgetType === 'number-card' || widgetType === 'ranking') ? '' : 'none';
-			legendWrap.style.display = (isChartType && chartType !== 'value-area') ? '' : 'none';
+			legendWrap.style.display = (isChartType && (chartType as string) !== 'value-area') ? '' : 'none';
 			preFilterWrap.style.display = widgetType === 'activity' ? 'none' : '';
 			booleanLabelsWrap.style.display = widgetType === 'boolean' ? '' : 'none';
 			// Show icon picker only for number-card
@@ -440,10 +440,10 @@ class AddWidgetModal extends Modal {
 // ─── Add Overview Widget Modal ────────────────────────────────────────────────
 
 class AddOverviewWidgetModal extends Modal {
-	private onSave: (type: 'breakdown' | 'total-items') => void;
-	private existingLayout: any[]; // Using any to avoid importing OverviewItem if it shifts but OverviewItem is available
+	private onSave: (type: 'breakdown' | 'total-items') => void | Promise<void>;
+	private existingLayout: OverviewItem[];
 
-	constructor(app: App, existingLayout: any[], onSave: (type: 'breakdown' | 'total-items') => void) {
+	constructor(app: App, existingLayout: OverviewItem[], onSave: (type: 'breakdown' | 'total-items') => void | Promise<void>) {
 		super(app);
 		this.existingLayout = existingLayout || [];
 		this.onSave = onSave;
@@ -851,7 +851,7 @@ export class DashboardView extends ItemView {
 			new AddOverviewWidgetModal(this.app, this.settings.overviewLayout!, async (type) => {
 				const id = 'glob-' + Math.random().toString(36).substring(2, 11);
 				const defaultCfg: Partial<OverviewItem> = {
-					size: type === 'breakdown' ? 'medium' : 'small',
+					size: type === 'breakdown' ? { height: 'small', span: 6 } : { height: 'small', span: 3 },
 					chartType: type === 'breakdown' ? 'doughnut' : undefined,
 					icon: type === 'total-items' ? 'library' : undefined,
 				};
@@ -1135,7 +1135,7 @@ export class DashboardView extends ItemView {
 				'doughnut': 'doughnut', 'pie': 'pie',
 				'bar-vertical': 'bar', 'bar-horizontal': 'bar',
 			};
-			const jsType = (ctMap[chartType] ?? 'doughnut') as any;
+			const jsType = (ctMap[chartType] ?? 'doughnut') as 'doughnut' | 'pie' | 'bar' | 'line';
 			const isHorizontal = chartType === 'bar-horizontal';
 			const isBar = chartType === 'bar-vertical' || isHorizontal;
 			const isPie = chartType === 'doughnut' || chartType === 'pie';
@@ -1175,7 +1175,7 @@ export class DashboardView extends ItemView {
 						},
 						tooltip: {
 							callbacks: {
-								label: (ctx) => {
+								label: (ctx: import('chart.js').TooltipItem<'line' | 'bar' | 'pie' | 'doughnut'>) => {
 									const val = ctx.raw as number;
 									const pct = Math.round((val / totalItems) * 100);
 									return ` ${val.toLocaleString()} (${pct}%)`;
@@ -1187,7 +1187,7 @@ export class DashboardView extends ItemView {
 						x: { ticks: { color: this.cssVar('--text-muted') }, grid: { color: this.cssVar('--background-modifier-border') } },
 						y: { ticks: { color: this.cssVar('--text-muted') }, grid: { color: this.cssVar('--background-modifier-border') } },
 					} : {},
-				} as any
+				} as unknown as import('chart.js').ChartConfiguration['options']
 			});
 			this.charts.push(chart);
 		});
@@ -1209,7 +1209,7 @@ export class DashboardView extends ItemView {
 			if (srcId && srcId !== itemId) card.addClass('dash-drag-over');
 		});
 		card.addEventListener('dragleave', () => card.removeClass('dash-drag-over'));
-		card.addEventListener('drop', async (e) => {
+		card.addEventListener('drop', (e) => {
 			e.preventDefault();
 			card.removeClass('dash-drag-over');
 			const srcId = e.dataTransfer?.getData('text/plain');
@@ -1223,20 +1223,20 @@ export class DashboardView extends ItemView {
 			const [moved] = layout2.splice(fromIdx, 1);
 			layout2.splice(toIdx, 0, moved);
 			this.settings.overviewLayout = layout2;
-			await this.saveQuiet();
-
-			// Move visually without re-render
-			const grid = card.parentElement;
-			if (grid) {
-				const draggedEl = grid.querySelector(`[data-widget-id="${srcId}"]`) as HTMLElement;
-				if (draggedEl) {
-					if (fromIdx < toIdx) {
-						card.after(draggedEl);
-					} else {
-						card.before(draggedEl);
+			void this.saveQuiet().then(() => {
+				// Move visually without re-render
+				const grid = card.parentElement;
+				if (grid) {
+					const draggedEl = grid.querySelector(`[data-widget-id="${srcId}"]`) as HTMLElement;
+					if (draggedEl) {
+						if (fromIdx < toIdx) {
+							card.after(draggedEl);
+						} else {
+							card.before(draggedEl);
+						}
 					}
 				}
-			}
+			});
 		});
 	}
 
@@ -1300,11 +1300,11 @@ export class DashboardView extends ItemView {
 	}
 
 	// ── Partial widget re-render (replaces a single card DOM node in-place) ──
-	private refreshWidgetCard(card: HTMLElement, grid: HTMLElement, col: CollectionConfig, config: WidgetConfig, records: RawRecord[], layout?: any) {
+	private refreshWidgetCard(card: HTMLElement, grid: HTMLElement, col: CollectionConfig, config: WidgetConfig, records: RawRecord[], isDraggable?: boolean) {
 		const next = activeDocument.createElement('div');
 		grid.insertBefore(next, card);
 		card.remove();
-		this.buildWidgetCard(grid, col, config, records, false, layout, next);
+		this.buildWidgetCard(grid, col, config, records, false, isDraggable, next);
 		this.flushChartQueue();
 	}
 	// ── Widget Card ───────────────────────────────────────────────────────────
@@ -1347,7 +1347,7 @@ export class DashboardView extends ItemView {
 				card.style.gridColumn = `span ${snapped}`;
 			};
 
-			const onUp = async (upEv: MouseEvent) => {
+			const onUp = (upEv: MouseEvent) => {
 				activeDocument.removeEventListener('mousemove', onMove);
 				activeDocument.removeEventListener('mouseup', onUp);
 				card.removeClass('dash-resizing');
@@ -1362,9 +1362,10 @@ export class DashboardView extends ItemView {
 				if (snapped !== curSpan) {
 					currentSize.span = snapped;
 					applySizeClass(currentSize);
-					await onResizeEnd(currentSize);
-					// Notify charts to redraw
-					this.charts.forEach(c => c.resize());
+					void onResizeEnd(currentSize).then(() => {
+						// Notify charts to redraw
+						this.charts.forEach(c => c.resize());
+					});
 				}
 			};
 
@@ -1393,7 +1394,7 @@ export class DashboardView extends ItemView {
 				card.style.gridColumn = `span ${snapped}`;
 			};
 
-			const onTouchEnd = async (upEv: TouchEvent) => {
+			const onTouchEnd = (upEv: TouchEvent) => {
 				activeDocument.removeEventListener('touchmove', onTouchMove);
 				activeDocument.removeEventListener('touchend', onTouchEnd);
 				card.removeClass('dash-resizing');
@@ -1409,8 +1410,9 @@ export class DashboardView extends ItemView {
 				if (snapped !== curSpan) {
 					currentSize.span = snapped;
 					applySizeClass(currentSize);
-					await onResizeEnd(currentSize);
-					this.charts.forEach(c => c.resize());
+					void onResizeEnd(currentSize).then(() => {
+						this.charts.forEach(c => c.resize());
+					});
 				}
 			};
 
@@ -1447,7 +1449,7 @@ export class DashboardView extends ItemView {
 				}
 			};
 
-			const onUp = async (upEv: MouseEvent) => {
+			const onUp = (upEv: MouseEvent) => {
 				activeDocument.removeEventListener('mousemove', onMove);
 				activeDocument.removeEventListener('mouseup', onUp);
 				card.removeClass('dash-resizing');
@@ -1468,9 +1470,10 @@ export class DashboardView extends ItemView {
 				if (targetHeight !== initialHeight) {
 					currentSize.height = targetHeight;
 					applySizeClass(currentSize);
-					await onResizeEnd(currentSize);
-					// Notify charts to redraw
-					this.charts.forEach(c => c.resize());
+					void onResizeEnd(currentSize).then(() => {
+						// Notify charts to redraw
+						this.charts.forEach(c => c.resize());
+					});
 				} else {
 					// Revert to actual initial height if not dragged enough
 					applySizeClass(currentSize);
@@ -1507,7 +1510,7 @@ export class DashboardView extends ItemView {
 				}
 			};
 
-			const onTouchEnd = async (upEv: TouchEvent) => {
+			const onTouchEnd = (upEv: TouchEvent) => {
 				activeDocument.removeEventListener('touchmove', onTouchMove);
 				activeDocument.removeEventListener('touchend', onTouchEnd);
 				card.removeClass('dash-resizing');
@@ -1526,8 +1529,9 @@ export class DashboardView extends ItemView {
 				if (targetHeight !== initialHeight) {
 					currentSize.height = targetHeight;
 					applySizeClass(currentSize);
-					await onResizeEnd(currentSize);
-					this.charts.forEach(c => c.resize());
+					void onResizeEnd(currentSize).then(() => {
+						this.charts.forEach(c => c.resize());
+					});
 				} else {
 					applySizeClass(currentSize);
 				}
@@ -1668,9 +1672,8 @@ export class DashboardView extends ItemView {
 				const pinEditBtn = actions.createEl('button', { cls: 'dash-widget-action-btn', attr: { 'data-icon': 'settings-2', 'aria-label': 'Edit Pin Settings' } });
 				setIcon(pinEditBtn, 'settings-2');
 				pinEditBtn.onclick = () => {
-					new PinEditModal(this.app, { size: config.size, fillRow: config.fillRow }, async (updated) => {
+					new PinEditModal(this.app, { size: config.size }, async (updated) => {
 						overviewItemOverride.size = updated.size;
-						overviewItemOverride.fillRow = updated.fillRow;
 						await this.saveQuiet();
 						void this.render();
 					}).open();
@@ -1758,7 +1761,7 @@ export class DashboardView extends ItemView {
 	// ── Drill-down (Interactive Data View) ────────────────────────────────────
 
 	private showDrilldown(col: CollectionConfig, config: WidgetConfig, initialFilter: string | null, records: RawRecord[]) {
-		let wrapper = this.contentEl.querySelector('.dash-drilldown-wrapper') as HTMLElement | null;
+		let wrapper = this.contentEl.querySelector('.dash-drilldown-wrapper');
 		if (!wrapper) {
 			const outer = this.contentEl.querySelector('.dash-content-outer') as HTMLElement;
 			wrapper = outer.createDiv('dash-drilldown-wrapper');
@@ -1856,7 +1859,7 @@ export class DashboardView extends ItemView {
 
 		const closeBtn = headerRight.createEl('button', { cls: 'dash-drilldown-close', attr: { 'aria-label': 'Close' } });
 		setIcon(closeBtn, 'x');
-		closeBtn.onclick = () => { wrapper!.empty(); wrapper!.addClass('hidden'); };
+		closeBtn.onclick = () => { wrapper.empty(); wrapper.addClass('hidden'); };
 
 		const tabsRow = headerContainer.createDiv('dash-drilldown-tabs');
 
@@ -1924,8 +1927,8 @@ export class DashboardView extends ItemView {
 
 		closeBtn.onclick = () => {
 			activeDocument.removeEventListener('click', closeSortDrop);
-			wrapper!.empty();
-			wrapper!.addClass('hidden');
+			wrapper.empty();
+			wrapper.addClass('hidden');
 		};
 
 		searchInput.oninput = () => {
@@ -1953,7 +1956,7 @@ export class DashboardView extends ItemView {
 		// Track scroll position to prevent jumping when config changes
 		let savedScrollTop = 0;
 		let savedOuterScrollTop = 0;
-		const outerScroll = this.contentEl.closest('.workspace-leaf-content') as HTMLElement | null;
+		const outerScroll = this.contentEl.closest('.workspace-leaf-content');
 
 		const renderContent = (preserveScroll = false) => {
 			// Save scroll positions before clearing
@@ -2044,7 +2047,7 @@ export class DashboardView extends ItemView {
 
 		renderContent(false);
 
-		window.setTimeout(() => { wrapper!.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 50);
+		window.setTimeout(() => { wrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 50);
 	}
 
 	// ── Drilldown Render Modes ─────────────────────────────────────────────────
@@ -2335,7 +2338,7 @@ export class DashboardView extends ItemView {
 			if (srcId && srcId !== widgetId) card.addClass('dash-drag-over');
 		});
 		card.addEventListener('dragleave', () => card.removeClass('dash-drag-over'));
-		card.addEventListener('drop', async (e) => {
+		card.addEventListener('drop', (e) => {
 			e.preventDefault();
 			card.removeClass('dash-drag-over');
 			const srcId = e.dataTransfer?.getData('text/plain');
@@ -2350,20 +2353,20 @@ export class DashboardView extends ItemView {
 			const [item] = widgets.splice(fromIdx, 1);
 			widgets.splice(toIdx, 0, item);
 			this.setActiveWidgets(col, widgets);
-			await this.saveQuiet();
-
-			// Move visually without re-render
-			const grid = card.parentElement;
-			if (grid) {
-				const draggedEl = grid.querySelector(`[data-widget-id="${srcId}"]`) as HTMLElement;
-				if (draggedEl) {
-					if (fromIdx < toIdx) {
-						card.after(draggedEl);
-					} else {
-						card.before(draggedEl);
+			void this.saveQuiet().then(() => {
+				// Move visually without re-render
+				const grid = card.parentElement;
+				if (grid) {
+					const draggedEl = grid.querySelector(`[data-widget-id="${srcId}"]`) as HTMLElement;
+					if (draggedEl) {
+						if (fromIdx < toIdx) {
+							card.after(draggedEl);
+						} else {
+							card.before(draggedEl);
+						}
 					}
 				}
-			}
+			});
 		});
 	}
 
@@ -2404,9 +2407,9 @@ function uid(): string {
 
 class PinEditModal extends Modal {
 	private cfg: { size: WidgetSize };
-	private onSave: (updated: { size: WidgetSize }) => void;
+	private onSave: (updated: { size: WidgetSize }) => void | Promise<void>;
 
-	constructor(app: App, cfg: { size: WidgetSize }, onSave: (updated: { size: WidgetSize }) => void) {
+	constructor(app: App, cfg: { size: WidgetSize }, onSave: (updated: { size: WidgetSize }) => void | Promise<void>) {
 		super(app);
 		this.cfg = { size: migrateSize(cfg.size) };
 		this.onSave = onSave;
@@ -2427,9 +2430,9 @@ class PinEditModal extends Modal {
 
 class BreakdownEditModal extends Modal {
 	private cfg: { size: WidgetSize; chartType: ChartType };
-	private onSave: (updated: { size: WidgetSize; chartType: ChartType }) => void;
+	private onSave: (updated: { size: WidgetSize; chartType: ChartType }) => void | Promise<void>;
 
-	constructor(app: App, cfg: { size: WidgetSize; chartType: ChartType }, onSave: (updated: { size: WidgetSize; chartType: ChartType }) => void) {
+	constructor(app: App, cfg: { size: WidgetSize; chartType: ChartType }, onSave: (updated: { size: WidgetSize; chartType: ChartType }) => void | Promise<void>) {
 		super(app);
 		this.cfg = { size: migrateSize(cfg.size), chartType: cfg.chartType };
 		this.onSave = onSave;
@@ -2464,15 +2467,15 @@ class BreakdownEditModal extends Modal {
 		const footer = contentEl.createDiv('dash-modal-footer');
 		const saveBtn = footer.createEl('button', { text: 'Save Changes', cls: 'dash-modal-save mod-cta' });
 		footer.createEl('button', { text: 'Cancel', cls: 'dash-modal-cancel' }).onclick = () => this.close();
-		saveBtn.onclick = () => { this.onSave(this.cfg); this.close(); };
+		saveBtn.onclick = () => { void this.onSave(this.cfg); this.close(); };
 	}
 }
 
 class TotalItemsEditModal extends Modal {
 	private cfg: { size: WidgetSize; icon?: string };
-	private onSave: (updated: { size: WidgetSize; icon?: string }) => void;
+	private onSave: (updated: { size: WidgetSize; icon?: string }) => void | Promise<void>;
 
-	constructor(app: App, cfg: { size: WidgetSize; icon?: string }, onSave: (updated: { size: WidgetSize; icon?: string }) => void) {
+	constructor(app: App, cfg: { size: WidgetSize; icon?: string }, onSave: (updated: { size: WidgetSize; icon?: string }) => void | Promise<void>) {
 		super(app);
 		this.cfg = { size: migrateSize(cfg.size), icon: cfg.icon };
 		this.onSave = onSave;
@@ -2521,7 +2524,7 @@ class TotalItemsEditModal extends Modal {
 		footer.createEl('button', { text: 'Cancel', cls: 'dash-modal-cancel' }).onclick = () => this.close();
 		saveBtn.onclick = () => {
 			this.cfg.icon = selectedIcon;
-			this.onSave(this.cfg);
+			void this.onSave(this.cfg);
 			this.close();
 		};
 	}

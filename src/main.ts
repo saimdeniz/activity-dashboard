@@ -47,32 +47,34 @@ export default class LibraryDashPlugin extends Plugin {
 
 	private scheduleSchemaRescan(file?: TFile) {
 		if (this.scanTimeout) window.clearTimeout(this.scanTimeout);
-		this.scanTimeout = window.setTimeout(async () => {
-			let changed = false;
-			const scanner = new SchemaScanner(this.app);
-			const reader = new CollectionReader(this.app);
-			for (const col of this.settings.collections) {
-				if (file) {
-					if (!this.fileMatchesCollection(file, col)) continue;
-					const totalFiles = reader.countAll(col);
-					const colChanged = scanner.updateSchemaWithFile(file, col, totalFiles);
-					if (colChanged) changed = true;
-				} else {
-					const newSchema = await scanner.scan(col);
-					if (JSON.stringify(col.schema) !== JSON.stringify(newSchema)) {
-						col.schema = newSchema;
-						changed = true;
+		this.scanTimeout = window.setTimeout(() => {
+			void (async () => {
+				let changed = false;
+				const scanner = new SchemaScanner(this.app);
+				const reader = new CollectionReader(this.app);
+				for (const col of this.settings.collections) {
+					if (file) {
+						if (!this.fileMatchesCollection(file, col)) continue;
+						const totalFiles = reader.countAll(col);
+						const colChanged = scanner.updateSchemaWithFile(file, col, totalFiles);
+						if (colChanged) changed = true;
+					} else {
+						const newSchema = await scanner.scan(col);
+						if (JSON.stringify(col.schema) !== JSON.stringify(newSchema)) {
+							col.schema = newSchema;
+							changed = true;
+						}
 					}
 				}
-			}
-			if (changed) {
-				await this.saveSettingsQuiet();
-				// Also refresh the UI config panel if it's currently open!
-				for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_DASHBOARD)) {
-					const view = leaf.view as DashboardView;
-					view.refresh();
+				if (changed) {
+					await this.saveSettingsQuiet();
+					// Also refresh the UI config panel if it's currently open!
+					for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_DASHBOARD)) {
+						const view = leaf.view as DashboardView;
+						view.refresh();
+					}
 				}
-			}
+			})();
 		}, 10000); // 10s debounce to reduce CPU load during active typing
 	}
 
