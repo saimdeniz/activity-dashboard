@@ -6,7 +6,7 @@ import type {
 } from '../types';
 import { migrateSize, sizeToClass } from '../types';
 import { CollectionReader } from '../core/CollectionReader';
-import { WidgetFactory, WIDGET_TYPE_LABELS } from './WidgetFactory';
+import { WidgetFactory } from './WidgetFactory';
 import type LibraryDashPlugin from '../main';
 import { extractDate, getISOWeek, toNumber } from '../utils/dateUtils';
 
