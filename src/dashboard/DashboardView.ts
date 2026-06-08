@@ -2109,7 +2109,7 @@ export class DashboardView extends ItemView {
 							drilldownYear = availableYears[availableYears.length - 1];
 						}
 					} else {
-						const currentIdx = availableYears.indexOf(drilldownYear as number);
+						const currentIdx = availableYears.indexOf(drilldownYear);
 						if (currentIdx > 0) {
 							drilldownYear = availableYears[currentIdx - 1];
 						} else if (availableYears.length > 0) {
@@ -2139,7 +2139,7 @@ export class DashboardView extends ItemView {
 							drilldownYear = availableYears[0];
 						}
 					} else {
-						const currentIdx = availableYears.indexOf(drilldownYear as number);
+						const currentIdx = availableYears.indexOf(drilldownYear);
 						if (currentIdx < availableYears.length - 1 && currentIdx > -1) {
 							drilldownYear = availableYears[currentIdx + 1];
 						} else if (availableYears.length > 0) {
