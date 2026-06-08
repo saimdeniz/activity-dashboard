@@ -81,12 +81,13 @@
   display: flex;
   align-items: center;
   padding: 4px 8px;
-  transition: background 0.12s, color 0.12s;
+  transition: background 0.12s, color 0.12s, transform 0.08s ease;
 }
 
 .dash-nav-btn svg, .dash-refresh-btn svg { width: 15px; height: 15px; }
 .dash-nav-btn:hover, .dash-refresh-btn:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
 .dash-nav-btn.active { background: var(--interactive-accent); color: var(--text-on-accent, #fff); border-color: var(--interactive-accent); }
+.dash-nav-btn:active, .dash-refresh-btn:active { transform: scale(0.92); }
 
 .dash-year-label {
   font-size: 1rem;
@@ -2120,4 +2121,57 @@ button.dash-empty-add-btn {
 
 .dash-mb-20 {
   margin-bottom: 20px;
+}
+
+/* ── Activity Drilldown Year Navigation ──────────────────────── */
+.dash-activity-year-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--background-secondary-alt);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 2px 4px;
+  height: 32px;
+  box-sizing: border-box;
+}
+
+.dash-activity-nav-btn {
+  background: transparent;
+  border: none;
+  border-radius: 5px;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  transition: background 0.12s, color 0.12s, transform 0.08s ease;
+  width: 24px;
+  height: 24px;
+}
+.dash-activity-nav-btn svg {
+  width: 14px;
+  height: 14px;
+}
+.dash-activity-nav-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+.dash-activity-nav-btn.active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent, #fff);
+}
+.dash-activity-nav-btn:active {
+  transform: scale(0.92);
+}
+
+.dash-activity-year-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--interactive-accent);
+  padding: 0 4px;
+  min-width: 50px;
+  text-align: center;
+  user-select: none;
 }

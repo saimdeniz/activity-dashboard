@@ -1752,7 +1752,14 @@ export class DashboardView extends ItemView {
 		this.chartFactoryQueue.push(() => {
 			factory.render({ 
 				body, config, records: widgetRecords, collection: col, charts: this.charts,
-				onDrilldown: (filterVal) => this.showDrilldown(col, config, filterVal, widgetRecords),
+				onDrilldown: (filterVal) => {
+					let drilldownRecords = widgetRecords;
+					if (config.type === 'activity') {
+						const reader = new CollectionReader(this.app);
+						drilldownRecords = reader.loadRecords(col, this.activeMode, 'all-time');
+					}
+					this.showDrilldown(col, config, filterVal, drilldownRecords);
+				},
 				onSave: () => this.saveQuiet(),
 			});
 		});
@@ -1769,6 +1776,16 @@ export class DashboardView extends ItemView {
 			wrapper.removeClass('hidden');
 		}
 		wrapper.empty();
+
+		let drilldownYear: number | 'all-time' = this.year;
+
+		// Get all unique years in dataset to allow navigations (if it's an activity chart)
+		const availableYears = config.type === 'activity' ? Array.from(new Set(
+			records.map(r => {
+				const d = extractDate(r.fields[config.field]);
+				return d ? d.getUTCFullYear() : null;
+			}).filter((y): y is number => y !== null)
+		)).sort((a, b) => a - b) : [];
 
 		// Get all unique categories
 		let catList: string[] = [];
@@ -1852,6 +1869,12 @@ export class DashboardView extends ItemView {
 		titleRow.createDiv({ text: config.title, cls: 'dash-drilldown-title' });
 
 		const headerRight = titleRow.createDiv('dash-drilldown-title-right');
+
+		// Create container for year navigation first, so it sits on the left of config and close buttons
+		let yearNavContainer: HTMLElement | null = null;
+		if (config.type === 'activity' && activityResolution !== 'yearly') {
+			yearNavContainer = headerRight.createDiv('dash-activity-year-nav');
+		}
 
 		// Configure button
 		const configBtn = headerRight.createEl('button', { cls: 'dash-drilldown-config-btn', attr: { 'aria-label': 'Configure view' } });
@@ -1976,10 +1999,18 @@ export class DashboardView extends ItemView {
 
 			contentArea.empty();
 
+			let baseRecords = records;
+			if (config.type === 'activity' && activityResolution !== 'yearly' && drilldownYear !== 'all-time') {
+				baseRecords = records.filter(r => {
+					const d = extractDate(r.fields[config.field]);
+					return d ? d.getUTCFullYear() === drilldownYear : false;
+				});
+			}
+
 			// Filter records
 			let filtered = activeTab === 'All'
-				? records
-				: records.filter(r => {
+				? baseRecords
+				: baseRecords.filter(r => {
 					const val = r.fields[config.field];
 
 					if (config.type === 'activity') {
@@ -2044,6 +2075,96 @@ export class DashboardView extends ItemView {
 				});
 			}
 		};
+
+		// Define renderYearNav after renderContent has been declared, so it can call renderContent safely
+		let renderYearNav = () => {};
+		if (config.type === 'activity' && activityResolution !== 'yearly' && yearNavContainer) {
+			const container = yearNavContainer;
+			renderYearNav = () => {
+				container.empty();
+
+				// Infinity button
+				const allTimeBtn = container.createEl('button', {
+					cls: `dash-activity-nav-btn ${drilldownYear === 'all-time' ? 'active' : ''}`,
+					attr: { 'aria-label': 'All Time' }
+				});
+				setIcon(allTimeBtn, 'infinity');
+				allTimeBtn.onclick = (e) => {
+					e.stopPropagation();
+					drilldownYear = 'all-time';
+					renderYearNav();
+					renderContent(true);
+				};
+
+				// Previous button
+				const prevBtn = container.createEl('button', {
+					cls: 'dash-activity-nav-btn',
+					attr: { 'aria-label': 'Previous Year' }
+				});
+				setIcon(prevBtn, 'chevron-left');
+				prevBtn.onclick = (e) => {
+					e.stopPropagation();
+					if (drilldownYear === 'all-time') {
+						if (availableYears.length > 0) {
+							drilldownYear = availableYears[availableYears.length - 1];
+						}
+					} else {
+						const currentIdx = availableYears.indexOf(drilldownYear as number);
+						if (currentIdx > 0) {
+							drilldownYear = availableYears[currentIdx - 1];
+						} else if (availableYears.length > 0) {
+							drilldownYear = availableYears[availableYears.length - 1];
+						}
+					}
+					renderYearNav();
+					renderContent(true);
+				};
+
+				// Year Label
+				container.createSpan({
+					text: drilldownYear === 'all-time' ? 'All Time' : String(drilldownYear),
+					cls: 'dash-activity-year-label'
+				});
+
+				// Next button
+				const nextBtn = container.createEl('button', {
+					cls: 'dash-activity-nav-btn',
+					attr: { 'aria-label': 'Next Year' }
+				});
+				setIcon(nextBtn, 'chevron-right');
+				nextBtn.onclick = (e) => {
+					e.stopPropagation();
+					if (drilldownYear === 'all-time') {
+						if (availableYears.length > 0) {
+							drilldownYear = availableYears[0];
+						}
+					} else {
+						const currentIdx = availableYears.indexOf(drilldownYear as number);
+						if (currentIdx < availableYears.length - 1 && currentIdx > -1) {
+							drilldownYear = availableYears[currentIdx + 1];
+						} else if (availableYears.length > 0) {
+							drilldownYear = availableYears[0];
+						}
+					}
+					renderYearNav();
+					renderContent(true);
+				};
+
+				// Sync button (Sync with Global Year)
+				const syncBtn = container.createEl('button', {
+					cls: 'dash-activity-nav-btn',
+					attr: { 'aria-label': 'Sync with Global Year' }
+				});
+				setIcon(syncBtn, 'refresh-cw');
+				syncBtn.onclick = (e) => {
+					e.stopPropagation();
+					drilldownYear = this.year;
+					renderYearNav();
+					renderContent(true);
+				};
+			};
+			renderYearNav();
+		}
 
 		renderContent(false);
 
