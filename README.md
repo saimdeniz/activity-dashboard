@@ -1,41 +1,40 @@
-# 📊 Obsidian Dashboard
+# Activity Dashboard for Obsidian
 
-**Obsidian Dashboard** is a massive UI and data-visualization overhaul for your vault. It transforms your scattered markdown metadata into a premium, interactive, and fully aesthetic visual command center. 
+Activity Dashboard is a data visualization and overview panel plugin for Obsidian. It aggregates metadata and properties from your markdown notes into interactive widgets, timelines, and statistics cards without requiring complex Dataview queries or JavaScript code.
 
-No coding, no complex Dataview queries—just beautiful drag-and-drop widgets, dynamic charts, and interactive media libraries built natively for Obsidian.
+The plugin helps you build visual command centers for tracking reading lists, gaming libraries, project progress, or personal habits.
 
-## ✨ Features
+## Key Features
 
-### 🗂️ Infinite Collections & Overview Pinboard
-Track totally different domains (Gaming, Reading, Movies, Dev Projects) by creating separate Collections. Love the big picture? Pin your favorite specific widgets from varying collections to your global **Overview Pinboard** for a master view of your life.
+### Collections and Pinboards
+Organize your tracking into separate workspaces called Collections (e.g., Books, Games, Projects) based on specific folders in your vault. You can also pin specific widgets from different collections to a global Overview Pinboard for a unified dashboard.
 
-### 📈 Dynamic & Colorful Widgets
-Create fully customized widgets by simply selecting a metadata property from your notes:
-- **Distribution Charts:** Stunning multi-colored Pie and Doughnut charts.
-- **Activity Timelines:** Automatically groups your completion dates into Monthly, Weekly, or Yearly stacked bar charts.
-- **Ranking Boards:** Colorful visual progress-lists for numerical properties (e.g., Top 10 Longest Playtimes).
-- **Number Cards:** Minimalist cards calculating overarching stats (Sum, Average, Count).
+### Customizable Widgets
+Create widgets by selecting any metadata property from your notes:
+* **Distribution Charts:** Visual pie and doughnut charts for categorical data.
+* **Activity Timelines:** Stacked bar charts that group completion dates into monthly, weekly, or yearly views.
+* **Ranking Lists:** Sorted list boards displaying top items based on numerical properties.
+* **Calculation Cards:** Metric displays showing summary calculations like count, sum, or average.
 
-### ⚡ Interactive Drilldown Views
-Widgets aren’t just static images! Click on any slice of a pie chart, a bar on your timeline, or a rank on your list to instantly trigger the **Drilldown Panel**. This slides open a perfectly aligned, interactive layout (visual cards or a sleek table) containing *only* the notes that match your selection. 
+### Interactive Drilldowns
+All charts and widgets support interactive drilldown. Clicking a segment of a chart or an item on a timeline opens a side panel displaying note cards or a table of the specific notes that match the selected data point.
 
-### 🏎️ Frictionless UX & Performance
-- **Smart Drag & Drop:** Effortlessly arrange widgets. Dragging an item to the edges of your screen triggers a buttery-smooth 60FPS fluid Auto-Scroll.
-- **Context-Aware UI:** Settings sliders dynamically adapt depending on whether you are viewing data in a Grid or List format.
-- **Zero-Friction Schema Syncing:** Utilizing Obsidian’s native memory caching, the plugin silently detects new properties embedded in your markdown files in the background—no manual re-scanning required.
+### Interface Customization
+* Drag-and-drop grid system for arranging widgets.
+* Dynamic auto-scroll support when dragging items to the edges of the window.
+* Contextual layout adjustments for grids and lists.
+* Automated property schema syncing that scans vault metadata in the background.
 
-## 🚀 How to Use
+## Installation
 
-1. **Install and Enable** the plugin, then click the Dashboard icon in your Ribbon.
-2. Go to Plugin Settings and add a new **Collection** (e.g., *Gaming Library*). 
-3. Target the folder where your markdown files are located.
-4. Open the Dashboard tab and click **Add Widget**. 
-5. Select a property (e.g., `genre`), choose your chart style, and watch your data come to life!
+### Manual Installation
+1. Go to the Releases page of this repository and download the latest release files (main.js, manifest.json, and styles.css).
+2. Create a folder named activity-dashboard under your vault's .obsidian/plugins/ directory.
+3. Copy the downloaded files into that folder.
+4. Open Obsidian settings, navigate to Community Plugins, reload, and enable Dashboard.
 
-## ⚙️ Installation
-1. Download the latest release from the Releases page.
-2. Extract the `main.js`, `manifest.json`, and `styles.css` files into `<your-vault>/.obsidian/plugins/activity-dashboard`.
-3. Reload Obsidian and enable the plugin in your settings!
-
-## 🤝 Contributing
-Feedback, bug reports, and pull requests are highly welcome! Feel free to open an issue to suggest new chart types or layout features.
+## Getting Started
+1. Click the Ribbon icon or run the command palette option to open the Dashboard.
+2. Go to the plugin settings tab and create your first Collection, targeting the folder containing your notes.
+3. Open the Dashboard tab, click the edit button, and add a widget.
+4. Select the property you want to visualize (e.g., status, rating, genre) and customize the chart type.
