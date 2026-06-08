@@ -1,0 +1,10 @@
+{
+  "id": "activity-dashboard",
+  "name": "Dashboard",
+  "version": "1.0.0",
+  "minAppVersion": "1.4.0",
+  "description": "Comprehensive media statistics and multi-resolution activity dashboard for Media DB notes.",
+  "author": "saimd",
+  "authorUrl": "",
+  "isDesktopOnly": false
+}

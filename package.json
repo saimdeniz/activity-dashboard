@@ -1,0 +1,19 @@
+{
+  "name": "obsidian-year-in-review",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite build --watch --mode development",
+    "build": "vite build --mode production"
+  },
+  "dependencies": {
+    "chart.js": "^4.4.3",
+    "obsidian": "^1.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "vite": "^6.0.0",
+    "vite-plugin-static-copy": "^2.0.0"
+  }
+}
