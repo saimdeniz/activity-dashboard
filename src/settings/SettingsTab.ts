@@ -120,7 +120,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 							const url = URL.createObjectURL(blob);
 							const a = activeDocument.createElement('a');
 							a.href = url;
-							a.download = `dashboard-settings-${new Date().toISOString().slice(0, 10)}.json`;
+							a.download = `activity-dashboard-settings-${new Date().toISOString().slice(0, 10)}.json`;
 							activeDocument.body.appendChild(a);
 							a.click();
 							activeDocument.body.removeChild(a);
