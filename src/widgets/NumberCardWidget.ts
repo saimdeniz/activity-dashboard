@@ -23,7 +23,6 @@ export function renderNumberCardWidget(params: {
 		: GenericAggregator.numericSummary(records, config.field);
 
 	let value: number;
-	let suffix = '';
 	switch (agg) {
 		case 'formula': value = summary.sum;     break;
 		case 'sum':     value = summary.sum;     break;

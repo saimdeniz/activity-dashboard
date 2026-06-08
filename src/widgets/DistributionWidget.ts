@@ -1,10 +1,7 @@
 import { Chart } from 'chart.js';
 import type { RawRecord, WidgetConfig } from '../types';
 import { GenericAggregator } from '../core/GenericAggregator';
-import { CHART_PALETTE } from '../types';
 import { generatePalette } from '../utils/ColorUtils';
-
-const MONTHS = GenericAggregator.MONTHS;
 
 /**
  * Renders a distribution chart (pie / doughnut / bar-horizontal / bar-vertical / polarArea)

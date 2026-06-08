@@ -25,7 +25,7 @@ export function extractDate(value: unknown): Date | null {
 	if (typeof value === 'string' && value.trim()) {
 		const s = value.trim();
 		// Match YYYY-MM-DD, YYYY/MM/DD, YYYY.MM.DD, or YYYY-MM
-		const matchYMD = s.match(/^(\d{4})[-\/\.](\d{1,2})(?:[-\/\.](\d{1,2}))?/);
+		const matchYMD = s.match(/^(\d{4})[-/.](\d{1,2})(?:[-/.](\d{1,2}))?/);
 		if (matchYMD) {
 			const year = parseInt(matchYMD[1], 10);
 			const month = parseInt(matchYMD[2], 10) - 1;
@@ -33,7 +33,7 @@ export function extractDate(value: unknown): Date | null {
 			return new Date(Date.UTC(year, month, day));
 		}
 		// Match DD-MM-YYYY, DD/MM/YYYY, or DD.MM.YYYY
-		const matchDMY = s.match(/^(\d{1,2})[-\/\.](\d{1,2})[-\/\.](\d{4})/);
+		const matchDMY = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);
 		if (matchDMY) {
 			const day = parseInt(matchDMY[1], 10);
 			const month = parseInt(matchDMY[2], 10) - 1;

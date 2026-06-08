@@ -71,7 +71,7 @@ export function renderActivityWidget(params: {
 		
 		if (isUserChange) {
 			config.activityResolution = res;
-			if (onSave) onSave();
+			if (onSave) void onSave();
 		}
 
 		if (chart) {

@@ -1,13 +1,12 @@
 import { ItemView, WorkspaceLeaf, setIcon, Modal, App, Notice, TFile, SliderComponent } from 'obsidian';
 import { Chart, registerables } from 'chart.js';
 import type {
-	CollectionConfig, DashboardSettings, OverviewPin, OverviewItem, OverviewMediaBreakdownConfig, DrilldownConfig,
+	CollectionConfig, DashboardSettings, OverviewItem,
 	RawRecord, WidgetConfig, WidgetSize, WidgetType, ChartType, AggregationType,
 } from '../types';
-import { COLLECTION_COLORS, migrateSize, sizeToClass } from '../types';
+import { migrateSize, sizeToClass } from '../types';
 import { CollectionReader } from '../core/CollectionReader';
-import { SchemaScanner } from '../core/SchemaScanner';
-import { WidgetFactory, WIDGET_TYPE_LABELS, CHART_TYPE_LABELS, AGG_LABELS } from './WidgetFactory';
+import { WidgetFactory, WIDGET_TYPE_LABELS } from './WidgetFactory';
 import type LibraryDashPlugin from '../main';
 import { extractDate, getISOWeek, toNumber } from '../utils/dateUtils';
 
@@ -77,8 +76,7 @@ class AddWidgetModal extends Modal {
 		const fieldSelectedText = fieldHeader.createSpan({ text: field || 'Select a field', cls: 'dash-field-selected-text' });
 		fieldHeader.createSpan({ text: '▼', cls: 'dash-field-chevron' });
 
-		const fieldDropdown = fieldPickerWrap.createDiv('dash-field-dropdown');
-		fieldDropdown.style.display = 'none';
+		const fieldDropdown = fieldPickerWrap.createDiv('dash-field-dropdown dash-hidden');
 
 		const fieldSearch = fieldDropdown.createEl('input', {
 			cls: 'dash-field-search',
@@ -88,13 +86,14 @@ class AddWidgetModal extends Modal {
 		const fieldListEl = fieldDropdown.createDiv('dash-field-list');
 
 		const toggleDropdown = (force?: boolean) => {
-			const isOpen = force !== undefined ? force : fieldDropdown.style.display === 'none';
-			fieldDropdown.style.display = isOpen ? 'flex' : 'none';
+			const isOpen = force !== undefined ? force : fieldDropdown.hasClass('dash-hidden');
 			if (isOpen) {
+				fieldDropdown.removeClass('dash-hidden');
 				fieldPickerWrap.addClass('dash-field-dropdown-open');
 				fieldSearch.focus();
 				renderFieldList();
 			} else {
+				fieldDropdown.addClass('dash-hidden');
 				fieldPickerWrap.removeClass('dash-field-dropdown-open');
 			}
 		};
@@ -144,12 +143,12 @@ class AddWidgetModal extends Modal {
 				toggleDropdown(false);
 			}
 		};
-		document.addEventListener('click', closeOutside);
+		activeDocument.addEventListener('click', closeOutside);
 		
 		// Cleanup listener when modal closes
 		const origClose = this.close.bind(this);
 		this.close = () => {
-			document.removeEventListener('click', closeOutside);
+			activeDocument.removeEventListener('click', closeOutside);
 			origClose();
 		};
 
@@ -594,13 +593,13 @@ export class DashboardView extends ItemView {
 					this.contentEl.scrollTop += 15;
 				}
 			}
-			this.autoScrollRaf = requestAnimationFrame(loop);
+			this.autoScrollRaf = window.requestAnimationFrame(loop);
 		};
 		loop();
 	}
 
 	private stopAutoScroll() {
-		if (this.autoScrollRaf) cancelAnimationFrame(this.autoScrollRaf);
+		if (this.autoScrollRaf) window.cancelAnimationFrame(this.autoScrollRaf);
 		this.autoScrollRaf = null;
 		this.dragY = -1;
 	}
@@ -613,7 +612,7 @@ export class DashboardView extends ItemView {
 	}
 
 	private cssVar(name: string): string {
-		return getComputedStyle(document.body).getPropertyValue(name).trim();
+		return getComputedStyle(activeDocument.body).getPropertyValue(name).trim();
 	}
 
 	private get settings(): DashboardSettings {
@@ -641,8 +640,8 @@ export class DashboardView extends ItemView {
 		const h = contentEl.offsetHeight;
 		if (h > 0) contentEl.style.minHeight = `${h}px`;
 
-		const fragment = document.createDocumentFragment();
-		const wrapper  = document.createElement('div');
+		const fragment = activeDocument.createDocumentFragment();
+		const wrapper  = activeDocument.createElement('div');
 		wrapper.className = 'dash-view';
 		fragment.appendChild(wrapper);
 
@@ -665,13 +664,13 @@ export class DashboardView extends ItemView {
 		// Defer Chart.js drawing until CSS layout is computed
 		// Defer Chart.js drawing until CSS layout is computed
 		this.flushChartQueue();
-		requestAnimationFrame(() => {
-			contentEl.style.minHeight = '';
+		window.requestAnimationFrame(() => {
+			contentEl.style.removeProperty('min-height');
 		});
 	}
 
 	private flushChartQueue() {
-		requestAnimationFrame(() => {
+		window.requestAnimationFrame(() => {
 			this.chartFactoryQueue.forEach(fn => fn());
 			this.chartFactoryQueue = [];
 			WidgetFactory.applyIcons(this.contentEl);
@@ -841,8 +840,7 @@ export class DashboardView extends ItemView {
 		// ── Overview Toolbar ──────────────────────────────────────────────────
 		const toolbar = el.createDiv('dash-collection-toolbar');
 		const colLabel = toolbar.createDiv('dash-collection-label');
-		const colIcon = colLabel.createDiv('dash-col-icon');
-		colIcon.style.backgroundColor = 'var(--interactive-accent)';
+		const colIcon = colLabel.createDiv('dash-col-icon dash-col-icon-accent');
 		setIcon(colIcon, 'layout-dashboard');
 		colLabel.createDiv({ text: 'Overview', cls: 'dash-col-name' });
 
@@ -937,7 +935,7 @@ export class DashboardView extends ItemView {
 		const resolvedSize = migrateSize(item.size ?? legacy.size);
 		const icon = item.icon ?? legacy.icon ?? 'library';
 
-		const card = document.createElement('div');
+		const card = activeDocument.createElement('div');
 		card.className = `dash-widget ${sizeToClass(resolvedSize)} dash-widget-pinref`;
 		const accentColor = this.settings.overviewColor || 'var(--interactive-accent)';
 		card.style.setProperty('--collection-color', accentColor);
@@ -1043,7 +1041,7 @@ export class DashboardView extends ItemView {
 		const resolvedBreakdownSize = migrateSize(item.size ?? legacy.size);
 		const chartType = (item.chartType ?? legacy.chartType ?? 'doughnut') as ChartType;
 
-		const card = document.createElement('div');
+		const card = activeDocument.createElement('div');
 		card.className = `dash-widget ${sizeToClass(resolvedBreakdownSize)} dash-widget-pinref`;
 		const accentColor = this.settings.overviewColor || 'var(--interactive-accent)';
 		card.style.setProperty('--collection-color', accentColor);
@@ -1129,9 +1127,7 @@ export class DashboardView extends ItemView {
 			return;
 		}
 
-		const canvas = body.createEl('canvas');
-		canvas.style.width = '100%';
-		canvas.style.height = '100%';
+		const canvas = body.createEl('canvas', { cls: 'dash-canvas-full' });
 
 		this.chartFactoryQueue.push(() => {
 			// Map our ChartType to Chart.js type
@@ -1205,7 +1201,7 @@ export class DashboardView extends ItemView {
 		});
 		card.addEventListener('dragend', () => {
 			card.removeClass('dash-dragging');
-			document.querySelectorAll('.dash-drag-over').forEach(el => el.removeClass('dash-drag-over'));
+			activeDocument.querySelectorAll('.dash-drag-over').forEach(el => el.removeClass('dash-drag-over'));
 		});
 		card.addEventListener('dragover', (e) => {
 			e.preventDefault();
@@ -1305,7 +1301,7 @@ export class DashboardView extends ItemView {
 
 	// ── Partial widget re-render (replaces a single card DOM node in-place) ──
 	private refreshWidgetCard(card: HTMLElement, grid: HTMLElement, col: CollectionConfig, config: WidgetConfig, records: RawRecord[], layout?: any) {
-		const next = document.createElement('div');
+		const next = activeDocument.createElement('div');
 		grid.insertBefore(next, card);
 		card.remove();
 		this.buildWidgetCard(grid, col, config, records, false, layout, next);
@@ -1352,10 +1348,10 @@ export class DashboardView extends ItemView {
 			};
 
 			const onUp = async (upEv: MouseEvent) => {
-				document.removeEventListener('mousemove', onMove);
-				document.removeEventListener('mouseup', onUp);
+				activeDocument.removeEventListener('mousemove', onMove);
+				activeDocument.removeEventListener('mouseup', onUp);
 				card.removeClass('dash-resizing');
-				card.style.gridColumn = '';
+				card.style.removeProperty('grid-column');
 
 				const dx = upEv.clientX - startX;
 				const targetCols = Math.round(curSpan + dx / colWidth);
@@ -1372,8 +1368,8 @@ export class DashboardView extends ItemView {
 				}
 			};
 
-			document.addEventListener('mousemove', onMove);
-			document.addEventListener('mouseup', onUp);
+			activeDocument.addEventListener('mousemove', onMove);
+			activeDocument.addEventListener('mouseup', onUp);
 		});
 
 		// Touch support for right handle
@@ -1398,10 +1394,10 @@ export class DashboardView extends ItemView {
 			};
 
 			const onTouchEnd = async (upEv: TouchEvent) => {
-				document.removeEventListener('touchmove', onTouchMove);
-				document.removeEventListener('touchend', onTouchEnd);
+				activeDocument.removeEventListener('touchmove', onTouchMove);
+				activeDocument.removeEventListener('touchend', onTouchEnd);
 				card.removeClass('dash-resizing');
-				card.style.gridColumn = '';
+				card.style.removeProperty('grid-column');
 
 				if (upEv.changedTouches.length === 0) return;
 				const dx = upEv.changedTouches[0].clientX - startX;
@@ -1418,8 +1414,8 @@ export class DashboardView extends ItemView {
 				}
 			};
 
-			document.addEventListener('touchmove', onTouchMove, { passive: false });
-			document.addEventListener('touchend', onTouchEnd);
+			activeDocument.addEventListener('touchmove', onTouchMove, { passive: false });
+			activeDocument.addEventListener('touchend', onTouchEnd);
 		}, { passive: false });
 
 
@@ -1452,8 +1448,8 @@ export class DashboardView extends ItemView {
 			};
 
 			const onUp = async (upEv: MouseEvent) => {
-				document.removeEventListener('mousemove', onMove);
-				document.removeEventListener('mouseup', onUp);
+				activeDocument.removeEventListener('mousemove', onMove);
+				activeDocument.removeEventListener('mouseup', onUp);
 				card.removeClass('dash-resizing');
 
 				// Check drag distance. If it was very small (like < 3px), treat it as a click toggle.
@@ -1481,8 +1477,8 @@ export class DashboardView extends ItemView {
 				}
 			};
 
-			document.addEventListener('mousemove', onMove);
-			document.addEventListener('mouseup', onUp);
+			activeDocument.addEventListener('mousemove', onMove);
+			activeDocument.addEventListener('mouseup', onUp);
 		});
 
 		// Touch support for bottom handle
@@ -1512,8 +1508,8 @@ export class DashboardView extends ItemView {
 			};
 
 			const onTouchEnd = async (upEv: TouchEvent) => {
-				document.removeEventListener('touchmove', onTouchMove);
-				document.removeEventListener('touchend', onTouchEnd);
+				activeDocument.removeEventListener('touchmove', onTouchMove);
+				activeDocument.removeEventListener('touchend', onTouchEnd);
 				card.removeClass('dash-resizing');
 
 				if (upEv.changedTouches.length === 0) return;
@@ -1537,8 +1533,8 @@ export class DashboardView extends ItemView {
 				}
 			};
 
-			document.addEventListener('touchmove', onTouchMove, { passive: false });
-			document.addEventListener('touchend', onTouchEnd);
+			activeDocument.addEventListener('touchmove', onTouchMove, { passive: false });
+			activeDocument.addEventListener('touchend', onTouchEnd);
 		}, { passive: false });
 	}
 	private buildWidgetCard(
@@ -1559,7 +1555,7 @@ export class DashboardView extends ItemView {
 		}
 
 		const resolvedSize = migrateSize(config.size);
-		const card = document.createElement('div');
+		const card = activeDocument.createElement('div');
 		card.className = `dash-widget ${sizeToClass(resolvedSize)} ${isPinRef ? 'dash-widget-pinref' : ''}`;
 		if (insertBeforeEl) {
 			grid.insertBefore(card, insertBeforeEl);
@@ -1715,7 +1711,7 @@ export class DashboardView extends ItemView {
 					const recs = reader.loadRecords(col, this.activeMode, this.year);
 					const cardEl = card as HTMLElement;
 					const parentGrid = cardEl.parentElement!;
-					const placeholder = document.createElement('div');
+					const placeholder = activeDocument.createElement('div');
 					parentGrid.insertBefore(placeholder, cardEl);
 					cardEl.remove();
 					this.buildWidgetCard(parentGrid, col, cfg, recs, false, true, placeholder);
@@ -1924,10 +1920,10 @@ export class DashboardView extends ItemView {
 			sortDropList.addClass('hidden');
 			sortDropBtn.removeClass('open');
 		};
-		document.addEventListener('click', closeSortDrop);
+		activeDocument.addEventListener('click', closeSortDrop);
 
 		closeBtn.onclick = () => {
-			document.removeEventListener('click', closeSortDrop);
+			activeDocument.removeEventListener('click', closeSortDrop);
 			wrapper!.empty();
 			wrapper!.addClass('hidden');
 		};
@@ -2039,7 +2035,7 @@ export class DashboardView extends ItemView {
 
 			// Restore scroll positions after re-render (for config panel changes)
 			if (preserveScroll) {
-				requestAnimationFrame(() => {
+				window.requestAnimationFrame(() => {
 					contentArea.scrollTop = savedScrollTop;
 					if (outerScroll) outerScroll.scrollTop = savedOuterScrollTop;
 				});
@@ -2048,7 +2044,7 @@ export class DashboardView extends ItemView {
 
 		renderContent(false);
 
-		setTimeout(() => { wrapper!.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 50);
+		window.setTimeout(() => { wrapper!.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 50);
 	}
 
 	// ── Drilldown Render Modes ─────────────────────────────────────────────────
@@ -2230,7 +2226,7 @@ export class DashboardView extends ItemView {
 		};
 
 		// Close when clicking outside
-		document.addEventListener('click', () => { imgDropList.addClass('hidden'); imgDropBtn.removeClass('open'); }, { once: false });
+		activeDocument.addEventListener('click', () => { imgDropList.addClass('hidden'); imgDropBtn.removeClass('open'); }, { once: false });
 
 		// Image Fit
 		const imageFitSection = imgSection.createDiv('dash-config-section');
@@ -2331,7 +2327,7 @@ export class DashboardView extends ItemView {
 		card.addEventListener('dragend', () => {
 			dragSrcId = null;
 			card.removeClass('dash-dragging');
-			document.querySelectorAll('.dash-drag-over').forEach(el => el.removeClass('dash-drag-over'));
+			activeDocument.querySelectorAll('.dash-drag-over').forEach(el => el.removeClass('dash-drag-over'));
 		});
 		card.addEventListener('dragover', (e) => {
 			e.preventDefault();
@@ -2511,7 +2507,6 @@ class TotalItemsEditModal extends Modal {
 			cls: 'dash-icon-picker-custom-input',
 			attr: { placeholder: 'e.g. lucide icon name', value: defaultIcons.includes(selectedIcon) ? '' : selectedIcon },
 		});
-		customIconInput.style.marginTop = '10px';
 		customIconInput.oninput = () => {
 			const val = customIconInput.value.trim();
 			if (val) {

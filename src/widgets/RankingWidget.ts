@@ -14,7 +14,7 @@ export function renderRankingWidget(params: {
 	collectionColor: string;
 	onDrilldown?: (filterValue: string | null) => void;
 }): void {
-	const { el, records, config, charts, cssVar, collectionColor, onDrilldown } = params;
+	const { el, records, config, charts, cssVar, onDrilldown } = params;
 	const topN = config.topN ?? 10;
 	const chartType = config.chartType ?? 'list';
 

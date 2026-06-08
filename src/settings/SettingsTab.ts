@@ -36,13 +36,12 @@ export class DashboardSettingTab extends PluginSettingTab {
 		containerEl.empty();
 		containerEl.addClass('dash-settings');
 
-		containerEl.createEl('h2', { text: 'Dashboard — Overview' });
-		const overviewSetting = new Setting(containerEl)
+		new Setting(containerEl).setName('Dashboard — Overview').setHeading();
+		new Setting(containerEl)
 			.setName('Overview Accent Color')
 			.setDesc('Accent color for the Overview tab widgets (Total Items, Charts, and Pinned widgets).');
 
-		const overviewSwatchRow = containerEl.createDiv('dash-color-swatch-row');
-		overviewSwatchRow.style.marginBottom = '20px';
+		const overviewSwatchRow = containerEl.createDiv('dash-color-swatch-row dash-mb-20');
 		
 		COLLECTION_COLORS.forEach(c => {
 			const activeColor = this.plugin.settings.overviewColor || '#818cf8';
@@ -80,7 +79,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 				})
 			);
 
-		containerEl.createEl('h2', { text: 'Dashboard — Collections' });
+		new Setting(containerEl).setName('Dashboard — Collections').setHeading();
 		containerEl.createEl('p', {
 			text: 'Define notes to visualise. Scan schema to discover fields.',
 			cls: 'dash-settings-desc',
@@ -89,7 +88,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 		const listEl = containerEl.createDiv('dash-settings-list');
 		this.renderCollectionList(listEl);
 
-		containerEl.createEl('h2', { text: 'Backup & Restore' });
+		new Setting(containerEl).setName('Backup & Restore').setHeading();
 		containerEl.createEl('p', {
 			text: 'Export your configuration settings to back them up or import them onto another device.',
 			cls: 'dash-settings-desc',
@@ -119,12 +118,12 @@ export class DashboardSettingTab extends PluginSettingTab {
 							const json = JSON.stringify(this.plugin.settings, null, 2);
 							const blob = new Blob([json], { type: 'application/json' });
 							const url = URL.createObjectURL(blob);
-							const a = document.createElement('a');
+							const a = activeDocument.createElement('a');
 							a.href = url;
 							a.download = `activity-dashboard-settings-${new Date().toISOString().slice(0, 10)}.json`;
-							document.body.appendChild(a);
+							activeDocument.body.appendChild(a);
 							a.click();
-							document.body.removeChild(a);
+							activeDocument.body.removeChild(a);
 							URL.revokeObjectURL(url);
 							new Notice('Configuration download started!');
 						} catch (err) {
@@ -157,7 +156,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 				btn.setButtonText('Import Backup')
 					.setTooltip('Upload and restore settings from a JSON file')
 					.onClick(() => {
-						const fileInput = document.createElement('input');
+						const fileInput = activeDocument.createElement('input');
 						fileInput.type = 'file';
 						fileInput.accept = '.json';
 						fileInput.onchange = async (e) => {
@@ -290,7 +289,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 			}));
 
 		// ── Icon Picker ───────────────────────────────────────────────────────
-		const iconSetting = new Setting(editor)
+		new Setting(editor)
 			.setName('Icon')
 			.setDesc('Click an icon to select it, or type a custom Lucide icon name below.');
 

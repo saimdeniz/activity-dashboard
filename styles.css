@@ -2099,3 +2099,25 @@
   opacity: 1;
   color: var(--interactive-accent);
 }
+
+/* Custom UI compliance utility classes */
+.dash-hidden {
+  display: none !important;
+}
+
+.dash-col-icon-accent {
+  background-color: var(--interactive-accent) !important;
+}
+
+.dash-canvas-full {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.dash-icon-picker-custom-input {
+  margin-top: 10px !important;
+}
+
+.dash-mb-20 {
+  margin-bottom: 20px !important;
+}

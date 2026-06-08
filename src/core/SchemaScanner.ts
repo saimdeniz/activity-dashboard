@@ -90,9 +90,9 @@ export class SchemaScanner {
 			const s = value.trim();
 			if (!s) return null;
 			// Strict Date detection to prevent URLs and Titles from falsely becoming dates
-			const isDatePattern = /^\d{4}[-\/\.]\d{1,2}[-\/\.]\d{1,2}/.test(s) || // YYYY-MM-DD
-								  /^\d{1,2}[-\/\.]\d{1,2}[-\/\.]\d{4}/.test(s) || // DD-MM-YYYY
-								  /^\d{4}[-\/\.]\d{1,2}$/.test(s) ||             // YYYY-MM
+			const isDatePattern = /^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}/.test(s) || // YYYY-MM-DD
+								  /^\d{1,2}[-/.]\d{1,2}[-/.]\d{4}/.test(s) || // DD-MM-YYYY
+								  /^\d{4}[-/.]\d{1,2}$/.test(s) ||             // YYYY-MM
 								  /^[a-zA-Z]{3,}\s+\d{1,2},?\s+\d{4}/.test(s);   // Oct 15, 2024
 			
 			if (isDatePattern && extractDate(s) !== null) {

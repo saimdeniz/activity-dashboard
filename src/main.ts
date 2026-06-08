@@ -21,7 +21,7 @@ export default class LibraryDashPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'open-dashboard',
-			name: 'Open Dashboard',
+			name: 'Open',
 			callback: () => void this.openDashboard(),
 		});
 
@@ -94,7 +94,6 @@ export default class LibraryDashPlugin extends Plugin {
 
 	onunload(): void {
 		if (this.scanTimeout) window.clearTimeout(this.scanTimeout);
-		this.app.workspace.detachLeavesOfType(VIEW_TYPE_DASHBOARD);
 	}
 
 	async loadSettings(): Promise<void> {
@@ -121,7 +120,7 @@ export default class LibraryDashPlugin extends Plugin {
 	private async openDashboard(): Promise<void> {
 		const existing = this.app.workspace.getLeavesOfType(VIEW_TYPE_DASHBOARD);
 		if (existing.length) {
-			this.app.workspace.revealLeaf(existing[0]);
+			await this.app.workspace.revealLeaf(existing[0]);
 		} else {
 			const leaf = this.app.workspace.getLeaf(false);
 			await leaf.setViewState({ type: VIEW_TYPE_DASHBOARD, active: true });

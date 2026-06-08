@@ -1,9 +1,9 @@
 {
   "id": "activity-dashboard",
-  "name": "Dashboard",
+  "name": "Activity Dashboard",
   "version": "1.0.0",
-  "minAppVersion": "1.4.0",
-  "description": "Comprehensive media statistics and multi-resolution activity dashboard for Media DB notes.",
+  "minAppVersion": "1.5.8",
+  "description": "Interactive metadata visualization and activity dashboard for Obsidian. Create custom charts, timelines, and statistics cards directly from your note properties.",
   "author": "saimd",
   "authorUrl": "",
   "isDesktopOnly": false

@@ -4,6 +4,127 @@ import { extractDate, getISOWeek } from '../utils/dateUtils';
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
 	'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+class SimpleMathParser {
+	private tokens: string[] = [];
+	private index = 0;
+
+	constructor(expression: string) {
+		const tokenRegex = /Math\.(abs|min|max|round|floor|ceil)|[0-9]+(?:\.[0-9]+)?|[\+\-\*\/\(\),]/g;
+		this.tokens = expression.match(tokenRegex) || [];
+	}
+
+	private peek(): string | undefined {
+		return this.tokens[this.index];
+	}
+
+	private consume(expected?: string): string {
+		const token = this.tokens[this.index++];
+		if (expected && token !== expected) {
+			throw new Error(`Expected ${expected} but got ${token}`);
+		}
+		return token;
+	}
+
+	public parse(): number {
+		const val = this.parseExpression();
+		if (this.index < this.tokens.length) {
+			throw new Error('Unexpected trailing tokens');
+		}
+		return val;
+	}
+
+	private parseExpression(): number {
+		let val = this.parseTerm();
+		while (true) {
+			const next = this.peek();
+			if (next === '+') {
+				this.consume();
+				val += this.parseTerm();
+			} else if (next === '-') {
+				this.consume();
+				val -= this.parseTerm();
+			} else {
+				break;
+			}
+		}
+		return val;
+	}
+
+	private parseTerm(): number {
+		let val = this.parseFactor();
+		while (true) {
+			const next = this.peek();
+			if (next === '*') {
+				this.consume();
+				val *= this.parseFactor();
+			} else if (next === '/') {
+				this.consume();
+				const divisor = this.parseFactor();
+				if (divisor === 0) {
+					throw new Error('Division by zero');
+				}
+				val /= divisor;
+			} else {
+				break;
+			}
+		}
+		return val;
+	}
+
+	private parseFactor(): number {
+		const token = this.peek();
+		if (!token) {
+			throw new Error('Unexpected end of expression');
+		}
+
+		if (token === '(') {
+			this.consume();
+			const val = this.parseExpression();
+			this.consume(')');
+			return val;
+		}
+
+		if (token === '-') {
+			this.consume();
+			return -this.parseFactor();
+		}
+
+		if (token === '+') {
+			this.consume();
+			return this.parseFactor();
+		}
+
+		if (token.startsWith('Math.')) {
+			const func = this.consume();
+			this.consume('(');
+			const args: number[] = [];
+			args.push(this.parseExpression());
+			while (this.peek() === ',') {
+				this.consume();
+				args.push(this.parseExpression());
+			}
+			this.consume(')');
+
+			switch (func) {
+				case 'Math.abs': return Math.abs(args[0]);
+				case 'Math.min': return Math.min(...args);
+				case 'Math.max': return Math.max(...args);
+				case 'Math.round': return Math.round(args[0]);
+				case 'Math.floor': return Math.floor(args[0]);
+				case 'Math.ceil': return Math.ceil(args[0]);
+				default: throw new Error(`Unknown function: ${func}`);
+			}
+		}
+
+		const num = parseFloat(token);
+		if (isNaN(num)) {
+			throw new Error(`Invalid token: ${token}`);
+		}
+		this.consume();
+		return num;
+	}
+}
+
 /**
  * GenericAggregator computes statistics from an array of RawRecords
  * for any property key — no type-specific knowledge required.
@@ -86,9 +207,9 @@ export class GenericAggregator {
 			throw new Error("Invalid characters in expression");
 		}
 
-		// 4. Evaluate safely
-		const fn = new Function(`return parseFloat(${substituted});`);
-		return fn();
+		// 4. Evaluate safely using custom math parser
+		const parser = new SimpleMathParser(substituted);
+		return parser.parse();
 	}
 
 	/** Formula summary (custom math expression evaluated per record) */
@@ -102,7 +223,7 @@ export class GenericAggregator {
 				if (!isNaN(result) && isFinite(result)) {
 					values.push(result);
 				}
-			} catch (e) {
+			} catch {
 				continue;
 			}
 		}
