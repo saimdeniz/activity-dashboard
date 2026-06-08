@@ -21,7 +21,9 @@ export function extractMonth(value: unknown): number | null {
 
 export function extractDate(value: unknown): Date | null {
 	if (!value) return null;
-	if (value instanceof Date && !isNaN(value.getTime())) return value;
+	if (value instanceof Date && !isNaN(value.getTime())) {
+		return new Date(Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()));
+	}
 	if (typeof value === 'string' && value.trim()) {
 		const s = value.trim();
 		// Match YYYY-MM-DD, YYYY/MM/DD, YYYY.MM.DD, or YYYY-MM
@@ -42,7 +44,9 @@ export function extractDate(value: unknown): Date | null {
 		}
 		
 		const d = new Date(s);
-		if (!isNaN(d.getTime())) return d;
+		if (!isNaN(d.getTime())) {
+			return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+		}
 	}
 	if (typeof value === 'number' && value >= 1000 && value <= 9999) {
 		return new Date(Date.UTC(value, 0, 1)); // Construct Date from year

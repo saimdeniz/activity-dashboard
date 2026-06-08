@@ -166,6 +166,7 @@ class AddWidgetModal extends Modal {
 			['bar-horizontal','Bar H'],
 			['bar-vertical',  'Bar V'],
 			['line',          'Line'],
+			['radar',         'Radar'],
 		];
 		chartEntries.forEach(([val, label]) => {
 			const btn = chartGroup.createEl('button', {
@@ -194,7 +195,7 @@ class AddWidgetModal extends Modal {
 		];
 		
 		const formulaWrap = contentEl.createDiv('dash-modal-inputs-row');
-		formulaWrap.style.display = aggregation === 'formula' ? 'flex' : 'none';
+		formulaWrap.style.setProperty('display', aggregation === 'formula' ? 'flex' : 'none');
 		const fMathWrap = formulaWrap.createDiv('dash-modal-input-group dash-modal-input-group--wide');
 		fMathWrap.createDiv({ text: 'Math Expression (e.g. episode * duration)', cls: 'dash-modal-input-label' });
 		const mathExpressionInput = fMathWrap.createEl('input', {
@@ -238,7 +239,7 @@ class AddWidgetModal extends Modal {
 				aggGroup.querySelectorAll('.dash-modal-pill').forEach(b => b.removeClass('active'));
 				btn.addClass('active');
 				aggregation = val;
-				formulaWrap.style.display = aggregation === 'formula' ? 'flex' : 'none';
+				formulaWrap.style.setProperty('display', aggregation === 'formula' ? 'flex' : 'none');
 			};
 		});
 
@@ -311,15 +312,17 @@ class AddWidgetModal extends Modal {
 		const refreshConditional = () => {
 			renderFieldList();
 			const isChartType = widgetType === 'distribution' || widgetType === 'boolean' || widgetType === 'activity' || widgetType === 'ranking';
-			chartWrap.style.display = isChartType ? '' : 'none';
-			aggWrap.style.display   = (widgetType === 'number-card' || widgetType === 'ranking') ? '' : 'none';
-			legendWrap.style.display = (isChartType && (chartType as string) !== 'value-area') ? '' : 'none';
-			preFilterWrap.style.display = widgetType === 'activity' ? 'none' : '';
-			booleanLabelsWrap.style.display = widgetType === 'boolean' ? '' : 'none';
+			chartWrap.style.setProperty('display', isChartType ? '' : 'none');
+			aggWrap.style.setProperty('display', (widgetType === 'number-card' || widgetType === 'ranking') ? '' : 'none');
+			legendWrap.style.setProperty('display', (isChartType && (chartType as string) !== 'value-area') ? '' : 'none');
+			preFilterWrap.style.setProperty('display', (widgetType === 'activity') ? 'none' : '');
+			booleanLabelsWrap.style.setProperty('display', widgetType === 'boolean' ? '' : 'none');
+			const showTopN = widgetType === 'distribution' || widgetType === 'ranking';
+			lWrap.style.setProperty('display', showTopN ? '' : 'none');
+			tWrap.toggleClass('dash-modal-inputs-grid-wide', !showTopN);
 			// Show icon picker only for number-card
-			if (iconPickerWrap) iconPickerWrap.style.display = widgetType === 'number-card' ? '' : 'none';
+			if (iconPickerWrap) iconPickerWrap.style.setProperty('display', widgetType === 'number-card' ? '' : 'none');
 		};
-		refreshConditional();
 
 		// ── Limit + Title — two-column grid, labels always top-aligned ────────
 		const inputsWrap = contentEl.createDiv('dash-modal-inputs-grid');
@@ -394,6 +397,8 @@ class AddWidgetModal extends Modal {
 			}
 		};
 
+		refreshConditional();
+
 		// ── Footer ────────────────────────────────────────────────────────────
 		const footer = contentEl.createDiv('dash-modal-footer');
 		const saveBtn = footer.createEl('button', {
@@ -410,7 +415,7 @@ class AddWidgetModal extends Modal {
 			const cfg: WidgetConfig = {
 				id: e?.id ?? uid(),
 				type: widgetType,
-				title: titleInput.value.trim() || `${f} — ${WIDGET_TYPE_LABELS[widgetType]}`,
+				title: titleInput.value.trim() || f,
 				field: f,
 				filterField: filterFieldInput.value.trim() || undefined,
 				filterValue: filterValueInput.value.trim() || undefined,
@@ -509,6 +514,7 @@ export class DashboardView extends ItemView {
 	private charts: Chart[] = [];
 	private chartFactoryQueue: (() => void)[] = [];
 	private static copiedWidgets: WidgetConfig[] | null = null;
+	private drilldownObserver: IntersectionObserver | null = null;
 
 	private dragY = -1;
 	private autoScrollRaf: number | null = null;
@@ -535,6 +541,10 @@ export class DashboardView extends ItemView {
 	async onClose(): Promise<void> {
 		this.stopAutoScroll();
 		this.destroyCharts();
+		if (this.drilldownObserver) {
+			this.drilldownObserver.disconnect();
+			this.drilldownObserver = null;
+		}
 	}
 
 	/** Add Copy/Paste Layout to the View's "More Options" (...) menu */
@@ -638,7 +648,7 @@ export class DashboardView extends ItemView {
 
 		// Height lock to prevent flicker
 		const h = contentEl.offsetHeight;
-		if (h > 0) contentEl.style.minHeight = `${h}px`;
+		if (h > 0) contentEl.style.setProperty('min-height', `${h}px`);
 
 		const fragment = activeDocument.createDocumentFragment();
 		const wrapper  = activeDocument.createElement('div');
@@ -706,7 +716,7 @@ export class DashboardView extends ItemView {
 		}
 
 		const iconWrap = left.createDiv('dash-page-header-icon');
-		iconWrap.style.color = color;
+		iconWrap.style.setProperty('color', color);
 		setIcon(iconWrap, iconName);
 
 		const textWrap = left.createDiv('dash-page-header-text');
@@ -804,7 +814,10 @@ export class DashboardView extends ItemView {
 		setIcon(iconEl, icon);
 		btn.createSpan({ text: label, cls: 'dash-tab-text' });
 
-		btn.onclick = () => { this.activeTab = id; void this.render(); };
+		btn.onclick = () => {
+			this.activeTab = id;
+			void this.render();
+		};
 	}
 
 	private getActiveWidgets(col: CollectionConfig): WidgetConfig[] {
@@ -963,7 +976,7 @@ export class DashboardView extends ItemView {
 
 		const titleEl = header.createDiv('dash-widget-title-wrap');
 		const dot = titleEl.createDiv('dash-widget-color-dot');
-		dot.style.backgroundColor = this.settings.overviewColor || 'var(--interactive-accent)';
+		dot.style.setProperty('background-color', this.settings.overviewColor || 'var(--interactive-accent)');
 		titleEl.createDiv({ text: 'TOTAL ITEMS', cls: 'dash-widget-title' });
 
 		const actions = header.createDiv('dash-widget-actions');
@@ -1069,7 +1082,7 @@ export class DashboardView extends ItemView {
 
 		const titleEl = header.createDiv('dash-widget-title-wrap');
 		const dot = titleEl.createDiv('dash-widget-color-dot');
-		dot.style.backgroundColor = this.settings.overviewColor || 'var(--interactive-accent)';
+		dot.style.setProperty('background-color', this.settings.overviewColor || 'var(--interactive-accent)');
 		titleEl.createDiv({ text: 'MEDIA BREAKDOWN', cls: 'dash-widget-title' });
 
 		// Edit button to change size & chart type
@@ -1114,9 +1127,9 @@ export class DashboardView extends ItemView {
 		const body = card.createDiv('dash-widget-body');
 		// Bind chart height to size height: mini ≈ 120px, small ≈ 240px
 		const heightVal = resolvedBreakdownSize.height === 'mini' ? '120px' : '240px';
-		body.style.height = heightVal;
-		body.style.minHeight = heightVal;
-		body.style.maxHeight = heightVal;
+		body.style.setProperty('height', heightVal);
+		body.style.setProperty('min-height', heightVal);
+		body.style.setProperty('max-height', heightVal);
 
 		if (totalItems === 0) {
 			body.addClass('dash-widget-body-empty');
@@ -1247,7 +1260,7 @@ export class DashboardView extends ItemView {
 		const toolbar = el.createDiv('dash-collection-toolbar');
 		const colLabel = toolbar.createDiv('dash-collection-label');
 		const colIcon = colLabel.createDiv('dash-col-icon');
-		colIcon.style.backgroundColor = col.color;
+		colIcon.style.setProperty('background-color', col.color);
 		setIcon(colIcon, col.icon);
 		colLabel.createDiv({ text: col.name, cls: 'dash-col-name' });
 
@@ -1344,7 +1357,7 @@ export class DashboardView extends ItemView {
 				const snapped = SPANS.reduce((prev, cur) =>
 					Math.abs(cur - targetCols) < Math.abs(prev - targetCols) ? cur : prev
 				);
-				card.style.gridColumn = `span ${snapped}`;
+				card.style.setProperty('grid-column', `span ${snapped}`);
 			};
 
 			const onUp = (upEv: MouseEvent) => {
@@ -1391,7 +1404,7 @@ export class DashboardView extends ItemView {
 				const snapped = SPANS.reduce((prev, cur) =>
 					Math.abs(cur - targetCols) < Math.abs(prev - targetCols) ? cur : prev
 				);
-				card.style.gridColumn = `span ${snapped}`;
+				card.style.setProperty('grid-column', `span ${snapped}`);
 			};
 
 			const onTouchEnd = (upEv: TouchEvent) => {
@@ -1613,7 +1626,7 @@ export class DashboardView extends ItemView {
 
 		const titleEl = header.createDiv('dash-widget-title-wrap');
 		const dot = titleEl.createDiv('dash-widget-color-dot');
-		dot.style.backgroundColor = isPinRef ? (this.settings.overviewColor || col.color) : col.color;
+		dot.style.setProperty('background-color', isPinRef ? (this.settings.overviewColor || col.color) : col.color);
 		titleEl.createDiv({ text: config.title, cls: 'dash-widget-title' });
 
 		// Action buttons
@@ -1752,6 +1765,8 @@ export class DashboardView extends ItemView {
 		this.chartFactoryQueue.push(() => {
 			factory.render({ 
 				body, config, records: widgetRecords, collection: col, charts: this.charts,
+				colorTheme: this.settings.colorPaletteTheme,
+				year: this.activeMode === 'year' ? this.year : 'all-time',
 				onDrilldown: (filterVal) => {
 					let drilldownRecords = widgetRecords;
 					if (config.type === 'activity') {
@@ -1982,6 +1997,10 @@ export class DashboardView extends ItemView {
 		const outerScroll = this.contentEl.closest('.workspace-leaf-content');
 
 		const renderContent = (preserveScroll = false) => {
+			if (this.drilldownObserver) {
+				this.drilldownObserver.disconnect();
+				this.drilldownObserver = null;
+			}
 			// Save scroll positions before clearing
 			if (preserveScroll) {
 				savedScrollTop = contentArea.scrollTop;
@@ -2020,6 +2039,8 @@ export class DashboardView extends ItemView {
 						else if (activityResolution === 'yearly') return String(d.getUTCFullYear()) === activeTab;
 						else return MONTHS[d.getUTCMonth()] === activeTab;
 					}
+
+
 
 					if (config.type === 'boolean' || typeof val === 'boolean' || String(val).toLowerCase() === 'true' || String(val).toLowerCase() === 'false') {
 						const isTrue = val === true || String(val).toLowerCase() === 'true' || val === 1 || String(val).toLowerCase() === 'yes';
@@ -2180,33 +2201,59 @@ export class DashboardView extends ItemView {
 		const grid = el.createDiv('dash-drilldown-grid');
 		grid.style.setProperty('--dd-card-min', `${dc.cardSize}px`);
 
-		for (const rec of records) {
-			const card = grid.createDiv('dash-drilldown-card');
-			card.onclick = () => this.app.workspace.openLinkText(rec.filePath, '', true);
+		let renderedCount = 0;
+		const batchSize = 30;
 
-			// Image (only in cards layout)
-			if (dc.imageField) {
-				const rawImg = rec.fields[dc.imageField];
-				const src = rawImg ? this.resolveImageSrc(String(rawImg)) : null;
-				if (src) {
-					const imgWrap = card.createDiv('dash-drilldown-img-wrap');
-					imgWrap.style.setProperty('--dd-img-ratio', String(dc.imageAspectRatio));
-					const img = imgWrap.createEl('img', { cls: 'dash-drilldown-img', attr: { src, loading: 'lazy' } });
-					img.style.objectFit = dc.imageFit;
+		const renderNextBatch = () => {
+			const batch = records.slice(renderedCount, renderedCount + batchSize);
+			for (const rec of batch) {
+				const card = grid.createDiv('dash-drilldown-card');
+				card.onclick = () => this.app.workspace.openLinkText(rec.filePath, '', true);
+
+				// Image (only in cards layout)
+				if (dc.imageField) {
+					const rawImg = rec.fields[dc.imageField];
+					const src = rawImg ? this.resolveImageSrc(String(rawImg)) : null;
+					if (src) {
+						const imgWrap = card.createDiv('dash-drilldown-img-wrap');
+						imgWrap.style.setProperty('--dd-img-ratio', String(dc.imageAspectRatio));
+						const img = imgWrap.createEl('img', { cls: 'dash-drilldown-img', attr: { src, loading: 'lazy' } });
+						img.style.setProperty('object-fit', dc.imageFit);
+					}
+				}
+
+				card.createDiv({ text: rec.title, cls: 'dash-drilldown-card-title' });
+				const meta = card.createDiv('dash-drilldown-card-meta');
+				for (const key of fields) {
+					const val = rec.fields[key];
+					if (val === undefined || val === null) continue;
+					const displayVal = Array.isArray(val) ? val.join(', ') : String(val);
+					if (!displayVal.trim()) continue;
+					const pill = meta.createDiv('dash-drilldown-pill');
+					pill.createSpan({ text: `${key}: `, cls: 'dash-drilldown-pill-label' });
+					pill.createSpan({ text: displayVal, cls: 'dash-drilldown-pill-value' });
 				}
 			}
+			renderedCount += batch.length;
+		};
 
-			card.createDiv({ text: rec.title, cls: 'dash-drilldown-card-title' });
-			const meta = card.createDiv('dash-drilldown-card-meta');
-			for (const key of fields) {
-				const val = rec.fields[key];
-				if (val === undefined || val === null) continue;
-				const displayVal = Array.isArray(val) ? val.join(', ') : String(val);
-				if (!displayVal.trim()) continue;
-				const pill = meta.createDiv('dash-drilldown-pill');
-				pill.createSpan({ text: `${key}: `, cls: 'dash-drilldown-pill-label' });
-				pill.createSpan({ text: displayVal, cls: 'dash-drilldown-pill-value' });
-			}
+		renderNextBatch();
+
+		if (renderedCount < records.length) {
+			const sentinel = el.createDiv('dash-drilldown-sentinel');
+			this.drilldownObserver = new IntersectionObserver((entries) => {
+				if (entries[0].isIntersecting) {
+					renderNextBatch();
+					if (renderedCount >= records.length) {
+						sentinel.remove();
+						this.drilldownObserver?.disconnect();
+						this.drilldownObserver = null;
+					}
+				}
+			}, {
+				rootMargin: '100px',
+			});
+			this.drilldownObserver.observe(sentinel);
 		}
 	}
 
@@ -2248,18 +2295,45 @@ export class DashboardView extends ItemView {
 
 		// Body
 		const tbody = table.createEl('tbody');
-		for (const rec of records) {
-			const row = tbody.createEl('tr');
-			row.onclick = () => this.app.workspace.openLinkText(rec.filePath, '', true);
-			row.addClass('dash-drilldown-table-row');
-			row.createEl('td', { text: rec.title, cls: 'dash-drilldown-table-title' });
-			for (const key of fields) {
-				const val = rec.fields[key];
-				const displayVal = val === undefined || val === null ? '—'
-					: Array.isArray(val) ? val.join(', ')
-					: String(val);
-				row.createEl('td', { text: displayVal });
+
+		let renderedCount = 0;
+		const batchSize = 30;
+
+		const renderNextBatch = () => {
+			const batch = records.slice(renderedCount, renderedCount + batchSize);
+			for (const rec of batch) {
+				const row = tbody.createEl('tr');
+				row.onclick = () => this.app.workspace.openLinkText(rec.filePath, '', true);
+				row.addClass('dash-drilldown-table-row');
+				row.createEl('td', { text: rec.title, cls: 'dash-drilldown-table-title' });
+				for (const key of fields) {
+					const val = rec.fields[key];
+					const displayVal = val === undefined || val === null ? '—'
+						: Array.isArray(val) ? val.join(', ')
+						: String(val);
+					row.createEl('td', { text: displayVal });
+				}
 			}
+			renderedCount += batch.length;
+		};
+
+		renderNextBatch();
+
+		if (renderedCount < records.length) {
+			const sentinel = el.createDiv('dash-drilldown-sentinel');
+			this.drilldownObserver = new IntersectionObserver((entries) => {
+				if (entries[0].isIntersecting) {
+					renderNextBatch();
+					if (renderedCount >= records.length) {
+						sentinel.remove();
+						this.drilldownObserver?.disconnect();
+						this.drilldownObserver = null;
+					}
+				}
+			}, {
+				rootMargin: '100px',
+			});
+			this.drilldownObserver.observe(sentinel);
 		}
 	}
 
@@ -2289,16 +2363,16 @@ export class DashboardView extends ItemView {
 				layoutGroup.querySelectorAll('.dash-config-pill').forEach(b => b.removeClass('active'));
 				btn.addClass('active');
 				// Show/hide sections based on layout
-				imgSection.style.display = l === 'cards' ? '' : 'none';
+				imgSection.style.setProperty('display', l === 'cards' ? '' : 'none');
 				const cssSec = panel.querySelector('.dash-card-size-section') as HTMLElement;
-				if (cssSec) cssSec.style.display = l === 'cards' ? '' : 'none';
+				if (cssSec) cssSec.style.setProperty('display', l === 'cards' ? '' : 'none');
 				await this.saveQuiet(); onChange();
 			};
 		});
 
 		// Card Size (only for cards)
 		const cardSizeSection = panel.createDiv('dash-config-section dash-card-size-section');
-		cardSizeSection.style.display = dc.layout === 'cards' ? '' : 'none';
+		cardSizeSection.style.setProperty('display', dc.layout === 'cards' ? '' : 'none');
 		cardSizeSection.createDiv({ text: `Card Size`, cls: 'dash-config-label' });
 		new SliderComponent(cardSizeSection)
 			.setLimits(50, 800, 10)
@@ -2312,7 +2386,7 @@ export class DashboardView extends ItemView {
 
 		// Image section (cards only)
 		const imgSection = panel.createDiv('dash-config-section');
-		imgSection.style.display = dc.layout === 'cards' ? '' : 'none';
+		imgSection.style.setProperty('display', dc.layout === 'cards' ? '' : 'none');
 
 		imgSection.createDiv({ text: 'Image Property', cls: 'dash-config-label' });
 
@@ -2336,8 +2410,8 @@ export class DashboardView extends ItemView {
 				item.addClass('active');
 				imgDropList.addClass('hidden');
 				imgDropBtn.removeClass('open');
-				imageFitSection.style.display = dc.imageField ? '' : 'none';
-				aspectSection.style.display = dc.imageField ? '' : 'none';
+				imageFitSection.style.setProperty('display', dc.imageField ? '' : 'none');
+				aspectSection.style.setProperty('display', dc.imageField ? '' : 'none');
 				await this.saveQuiet(); onChange();
 			};
 		});
@@ -2354,7 +2428,7 @@ export class DashboardView extends ItemView {
 
 		// Image Fit
 		const imageFitSection = imgSection.createDiv('dash-config-section');
-		imageFitSection.style.display = dc.imageField ? '' : 'none';
+		imageFitSection.style.setProperty('display', dc.imageField ? '' : 'none');
 		imageFitSection.createDiv({ text: 'Image Fit', cls: 'dash-config-label' });
 		const fitGroup = imageFitSection.createDiv('dash-config-pill-group');
 		(['cover', 'contain'] as const).forEach(fit => {
@@ -2372,7 +2446,7 @@ export class DashboardView extends ItemView {
 
 		// Image Aspect Ratio
 		const aspectSection = imgSection.createDiv('dash-config-section');
-		aspectSection.style.display = dc.imageField ? '' : 'none';
+		aspectSection.style.setProperty('display', dc.imageField ? '' : 'none');
 		aspectSection.createDiv({ text: `Image Aspect Ratio`, cls: 'dash-config-label' });
 		new SliderComponent(aspectSection)
 			.setLimits(0.25, 2.50, 0.05)

@@ -19,10 +19,11 @@ export function renderActivityWidget(params: {
 	charts: Chart[];
 	cssVar: (v: string) => string;
 	collectionColor: string;
+	colorTheme?: 'classic' | 'pastel' | 'neon' | 'monochrome';
 	onDrilldown?: (filterValue: string | null) => void;
 	onSave?: () => Promise<void>;
 }): void {
-	const { el, records, config, charts, cssVar, collectionColor, onDrilldown, onSave } = params;
+	const { el, records, config, charts, cssVar, collectionColor, colorTheme, onDrilldown, onSave } = params;
 	const dateField = config.field;
 
 	const data = GenericAggregator.activity(records, dateField);
@@ -85,19 +86,19 @@ export function renderActivityWidget(params: {
 		const isHBar = chartType === 'bar-horizontal';
 		const isVBar = chartType === 'bar-vertical';
 		const isBar  = isHBar || isVBar;
-		const isLineOrRadar = chartType === 'line';
+		const isLineOrRadar = chartType === 'line' || chartType === 'radar';
 
 		let displayLegend = !isBar;
 		if (config.legendPosition === 'hidden') displayLegend = false;
 		else if (config.legendPosition) displayLegend = true;
 
-		const bgColors = generatePalette(color, labels.length).map(c => {
+		const bgColors = generatePalette(color, labels.length, colorTheme).map(c => {
 			return (isBar || isLineOrRadar) ? c.replace('hsl(', 'hsla(').replace(')', ', 0.8)') : c;
 		});
 		const borderColors = isLineOrRadar ? color : 'transparent';
 
 		chart = new Chart(canvas, {
-			type: isBar ? 'bar' : (chartType as 'line' | 'bar' | 'pie' | 'doughnut'),
+			type: isBar ? 'bar' : (chartType as 'line' | 'bar' | 'pie' | 'doughnut' | 'radar'),
 			data: {
 				labels,
 				datasets: [{
@@ -160,7 +161,14 @@ export function renderActivityWidget(params: {
 						grid: { color: isVBar || chartType === 'line' ? gridCol : 'transparent' },
 						beginAtZero: true,
 					},
-				} : {},
+				} : (chartType === 'radar' ? {
+					r: {
+						angleLines: { color: gridCol },
+						grid: { color: gridCol },
+						pointLabels: { color: text, font: { size: 10 } },
+						ticks: { showLabelBackdrop: false, color: text, font: { size: 9 } },
+					}
+				} : {}),
 			},
 		});
 

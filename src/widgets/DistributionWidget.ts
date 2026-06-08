@@ -14,9 +14,10 @@ export function renderDistributionWidget(params: {
 	charts: Chart[];
 	cssVar: (v: string) => string;
 	collectionColor: string;
+	colorTheme?: 'classic' | 'pastel' | 'neon' | 'monochrome';
 	onDrilldown?: (filterValue: string | null) => void;
 }): void {
-	const { el, records, config, charts, cssVar, collectionColor, onDrilldown } = params;
+	const { el, records, config, charts, cssVar, collectionColor, colorTheme, onDrilldown } = params;
 	const topN = config.topN ?? 12;
 	const data = GenericAggregator.distribution(records, config.field, topN);
 	const chartType = config.chartType ?? 'doughnut';
@@ -33,7 +34,7 @@ export function renderDistributionWidget(params: {
 	const values = data.map(([, v]) => v);
 	
 	// Dynamic palette generation: ensures harmonious, non-repeating colors
-	const colors = generatePalette(collectionColor, labels.length);
+	const colors = generatePalette(collectionColor, labels.length, colorTheme);
 
 	// Enhanced Boolean Detection: If the data contains explicit boolean strings, prettify them
 	labels.forEach((label, i) => {
@@ -51,14 +52,14 @@ export function renderDistributionWidget(params: {
 	const isHBar = chartType === 'bar-horizontal';
 	const isVBar = chartType === 'bar-vertical';
 	const isBar  = isHBar || isVBar;
-	const isLineOrRadar = chartType === 'line';
+	const isLineOrRadar = chartType === 'line' || chartType === 'radar';
 
 	let displayLegend = !isBar;
 	if (config.legendPosition === 'hidden') displayLegend = false;
 	else if (config.legendPosition) displayLegend = true;
 
 	charts.push(new Chart(canvas, {
-		type: isBar ? 'bar' : (chartType as 'line' | 'bar' | 'pie' | 'doughnut'),
+		type: isBar ? 'bar' : (chartType as 'line' | 'bar' | 'pie' | 'doughnut' | 'radar'),
 		data: {
 			labels,
 			datasets: [{
@@ -130,7 +131,14 @@ export function renderDistributionWidget(params: {
 					grid: { color: isVBar || chartType === 'line' ? gridColor : 'transparent' },
 					beginAtZero: true,
 				},
-			} : {},
+			} : (chartType === 'radar' ? {
+				r: {
+					angleLines: { color: gridColor },
+					grid: { color: gridColor },
+					pointLabels: { color: text, font: { size: 10 } },
+					ticks: { showLabelBackdrop: false, color: text, font: { size: 9 } },
+				}
+			} : {}),
 		},
 	}));
 }

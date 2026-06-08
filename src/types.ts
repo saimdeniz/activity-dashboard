@@ -1,6 +1,6 @@
 // ─── Chart & Widget Enums ─────────────────────────────────────────────────────
 
-export type ChartType = 'list' | 'doughnut' | 'pie' | 'bar-horizontal' | 'bar-vertical' | 'line';
+export type ChartType = 'list' | 'doughnut' | 'pie' | 'bar-horizontal' | 'bar-vertical' | 'line' | 'radar';
 export type WidgetType = 'distribution' | 'number-card' | 'ranking' | 'activity' | 'boolean';
 
 /** Two-dimensional widget size: height (compact mini vs full small) × width (span 3/4/6/9/12) */
@@ -141,6 +141,7 @@ export interface DashboardSettings {
 	overviewMediaBreakdown?: OverviewMediaBreakdownConfig;
 	overviewTotalItems?: { size: WidgetSize; icon?: string };
 	overviewColor?: string;
+	colorPaletteTheme?: 'classic' | 'pastel' | 'neon' | 'monochrome';
 }
 
 // ─── Runtime data types ───────────────────────────────────────────────────────

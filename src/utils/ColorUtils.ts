@@ -6,25 +6,43 @@
  * Generates an array of harmonious colors by rotating the hue of a base color.
  * Resulting colors have a slight variance in lightness/saturation for a premium look.
  */
-export function generatePalette(baseHex: string, count: number): string[] {
+export function generatePalette(
+	baseHex: string,
+	count: number,
+	theme: 'classic' | 'pastel' | 'neon' | 'monochrome' = 'classic'
+): string[] {
 	const hsl = hexToHsl(baseHex);
 	if (!hsl) return Array(count).fill(baseHex) as string[];
 
 	const palette: string[] = [];
-	// If count is 1, just return the base
 	if (count <= 1) return [baseHex];
 
 	for (let i = 0; i < count; i++) {
-		// Calculate a shift in hue. We don't want to rotate too wildly for small counts,
-		// but for large counts (like 50 actors), we rotate progressively.
-		const hShift = (360 / Math.max(count, 12)) * i;
-		const h = (hsl.h + hShift) % 360;
-		
-		// Subtly vary saturation and lightness to make barcharts look more "dynamic"
-		// alternating between slightly darker/lighter or more/less saturated
-		const s = Math.max(30, Math.min(90, hsl.s + (i % 2 === 0 ? 5 : -5)));
-		const l = Math.max(30, Math.min(80, hsl.l + (i % 3 === 0 ? 3 : -3)));
-		
+		let h = hsl.h;
+		if (theme !== 'monochrome') {
+			const hShift = (360 / Math.max(count, 12)) * i;
+			h = (hsl.h + hShift) % 360;
+		}
+
+		let s = hsl.s;
+		let l = hsl.l;
+
+		if (theme === 'pastel') {
+			s = 45 + (i % 2 === 0 ? 5 : -5);
+			l = 70 + (i % 3 === 0 ? 3 : -3);
+		} else if (theme === 'neon') {
+			s = 90 + (i % 2 === 0 ? 5 : -5);
+			l = 50 + (i % 3 === 0 ? 3 : -3);
+		} else if (theme === 'monochrome') {
+			const lMin = 35;
+			const lMax = 75;
+			l = count > 1 ? lMin + ((lMax - lMin) / (count - 1)) * i : hsl.l;
+			s = hsl.s;
+		} else {
+			s = Math.max(30, Math.min(90, hsl.s + (i % 2 === 0 ? 5 : -5)));
+			l = Math.max(30, Math.min(80, hsl.l + (i % 3 === 0 ? 3 : -3)));
+		}
+
 		palette.push(`hsl(${h}, ${s}%, ${l}%)`);
 	}
 

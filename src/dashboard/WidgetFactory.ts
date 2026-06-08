@@ -23,10 +23,12 @@ export class WidgetFactory {
 		records: RawRecord[];
 		collection: CollectionConfig;
 		charts: Chart[];
+		colorTheme?: 'classic' | 'pastel' | 'neon' | 'monochrome';
+		year?: number | 'all-time';
 		onDrilldown?: (filterValue: string | null) => void;
 		onSave?: () => Promise<void>;
 	}): void {
-		const { body, config, records, collection, charts, onDrilldown, onSave } = params;
+		const { body, config, records, collection, charts, colorTheme, year, onDrilldown, onSave } = params;
 
 		const base = {
 			el: body,
@@ -35,6 +37,8 @@ export class WidgetFactory {
 			charts,
 			cssVar: this.cssVar,
 			collectionColor: collection.color,
+			colorTheme,
+			year,
 			onDrilldown,
 			onSave,
 		};
@@ -86,6 +90,7 @@ export const CHART_TYPE_LABELS: Record<string, string> = {
 	'bar-horizontal': 'Bar (Horizontal)',
 	'bar-vertical': 'Bar (Vertical)',
 	polarArea: 'Polar Area',
+	radar: 'Radar',
 };
 
 /** Aggregation options with labels */

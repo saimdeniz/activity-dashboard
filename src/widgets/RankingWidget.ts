@@ -67,24 +67,24 @@ export function renderRankingWidget(params: {
 	const isHBar = chartType === 'bar-horizontal';
 	const isVBar = chartType === 'bar-vertical';
 	const isBar  = isHBar || isVBar;
-	const isLine = chartType === 'line';
+	const isLineOrRadar = chartType === 'line' || chartType === 'radar';
 
 	let displayLegend = !isBar;
 	if (config.legendPosition === 'hidden') displayLegend = false;
 	else if (config.legendPosition) displayLegend = true;
 
 	charts.push(new Chart(canvas, {
-		type: isBar ? 'bar' : (chartType as 'line' | 'bar' | 'pie' | 'doughnut'),
+		type: isBar ? 'bar' : (chartType as 'line' | 'bar' | 'pie' | 'doughnut' | 'radar'),
 		data: {
 			labels,
 			datasets: [{
 				label: config.field,
 				data: values,
-				backgroundColor: isBar || isLine ? colors.map(c => c + 'cc') : colors,
-				borderColor: isLine ? colors[0] : 'transparent',
-				borderWidth: isLine ? 2 : 0,
+				backgroundColor: isBar || isLineOrRadar ? colors.map(c => c + 'cc') : colors,
+				borderColor: isLineOrRadar ? colors[0] : 'transparent',
+				borderWidth: isLineOrRadar ? 2 : 0,
 				borderRadius: isBar ? 4 : 0,
-				fill: isLine ? true : undefined,
+				fill: isLineOrRadar ? true : undefined,
 			}],
 		},
 		options: {
@@ -133,7 +133,7 @@ export function renderRankingWidget(params: {
 					}
 				}
 			},
-			scales: (isBar || isLine) ? {
+			scales: (isBar || chartType === 'line') ? {
 				x: {
 					ticks: { color: text, font: { size: 11 } },
 					grid: { color: isHBar ? gridColor : 'transparent' },
@@ -141,10 +141,17 @@ export function renderRankingWidget(params: {
 				},
 				y: {
 					ticks: { color: text, font: { size: 11 } },
-					grid: { color: isVBar || isLine ? gridColor : 'transparent' },
+					grid: { color: isVBar || chartType === 'line' ? gridColor : 'transparent' },
 					beginAtZero: true,
 				},
-			} : {},
+			} : (chartType === 'radar' ? {
+				r: {
+					angleLines: { color: gridColor },
+					grid: { color: gridColor },
+					pointLabels: { color: text, font: { size: 10 } },
+					ticks: { showLabelBackdrop: false, color: text, font: { size: 9 } },
+				}
+			} : {}),
 		},
 	}));
 }

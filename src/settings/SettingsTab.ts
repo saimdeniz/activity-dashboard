@@ -13,6 +13,7 @@ export const DEFAULT_SETTINGS: DashboardSettings = {
 	overviewPins: [],
 	overviewMediaBreakdown: { size: { height: 'small', span: 6 }, chartType: 'doughnut' },
 	overviewColor: '#818cf8',
+	colorPaletteTheme: 'classic',
 };
 
 // Curated icon set for the visual picker
@@ -26,12 +27,16 @@ const ICON_PRESETS = [
 
 export class DashboardSettingTab extends PluginSettingTab {
 	private expandedId: string | null = null;
+	private closeDropdowns: (() => void)[] = [];
 
 	constructor(app: App, private plugin: LibraryDashPlugin) {
 		super(app, plugin);
 	}
 
 	display(): void {
+		this.closeDropdowns.forEach(fn => fn());
+		this.closeDropdowns = [];
+
 		const { containerEl } = this;
 		containerEl.empty();
 		containerEl.addClass('dash-settings');
@@ -46,7 +51,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 		COLLECTION_COLORS.forEach(c => {
 			const activeColor = this.plugin.settings.overviewColor || '#818cf8';
 			const swatch = overviewSwatchRow.createDiv({ cls: `dash-color-swatch ${activeColor === c ? 'active' : ''}` });
-			swatch.style.backgroundColor = c;
+			swatch.style.setProperty('background-color', c);
 			swatch.setAttribute('title', c);
 			swatch.onclick = async () => {
 				this.plugin.settings.overviewColor = c;
@@ -78,6 +83,68 @@ export class DashboardSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				})
 			);
+
+		const themeSetting = new Setting(containerEl)
+			.setName('Chart Color Theme')
+			.setDesc('Select the color theme to use for chart palettes (Classic, Pastel, Neon, Monochrome).');
+
+		const activeTheme = this.plugin.settings.colorPaletteTheme || 'classic';
+		const themeLabels: Record<string, string> = {
+			classic: 'Classic',
+			pastel: 'Pastel',
+			neon: 'Neon',
+			monochrome: 'Monochrome',
+		};
+
+		const dropWrap = themeSetting.controlEl.createDiv('dash-custom-dropdown');
+		const dropBtn = dropWrap.createDiv('dash-custom-dropdown-btn dash-settings-theme-dropdown-btn');
+		const dropLabel = dropBtn.createSpan({ text: themeLabels[activeTheme] || 'Classic', cls: 'dash-custom-dropdown-label' });
+		const dropArrow = dropBtn.createSpan({ cls: 'dash-custom-dropdown-arrow' });
+		setIcon(dropArrow, 'chevron-down');
+
+		const dropList = dropWrap.createDiv('dash-custom-dropdown-list dash-settings-theme-dropdown-list hidden');
+
+		const options: { value: 'classic' | 'pastel' | 'neon' | 'monochrome'; label: string }[] = [
+			{ value: 'classic', label: 'Classic' },
+			{ value: 'pastel', label: 'Pastel' },
+			{ value: 'neon', label: 'Neon' },
+			{ value: 'monochrome', label: 'Monochrome' },
+		];
+
+		options.forEach(opt => {
+			const item = dropList.createDiv({ 
+				cls: `dash-custom-dropdown-item${activeTheme === opt.value ? ' active' : ''}` 
+			});
+			item.setText(opt.label);
+			item.onclick = async (e) => {
+				e.stopPropagation();
+				this.plugin.settings.colorPaletteTheme = opt.value;
+				dropLabel.setText(opt.label);
+				dropList.querySelectorAll('.dash-custom-dropdown-item').forEach(i => i.removeClass('active'));
+				item.addClass('active');
+				dropList.addClass('hidden');
+				dropBtn.removeClass('open');
+				await this.plugin.saveSettings();
+			};
+		});
+
+		dropBtn.onclick = (e) => {
+			e.stopPropagation();
+			const isOpen = !dropList.hasClass('hidden');
+			dropList.toggleClass('hidden', isOpen);
+			dropBtn.toggleClass('open', !isOpen);
+		};
+
+		const closeDropdown = (ev: MouseEvent) => {
+			if (!dropWrap.contains(ev.target as Node)) {
+				dropList.addClass('hidden');
+				dropBtn.removeClass('open');
+			}
+		};
+		activeDocument.addEventListener('click', closeDropdown);
+		this.closeDropdowns.push(() => {
+			activeDocument.removeEventListener('click', closeDropdown);
+		});
 
 		new Setting(containerEl).setName('Dashboard — Collections').setHeading();
 		containerEl.createEl('p', {
@@ -241,7 +308,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 		};
 
 		const colorBadge = header.createDiv('dash-settings-color-badge');
-		colorBadge.style.backgroundColor = col.color;
+		colorBadge.style.setProperty('background-color', col.color);
 		const colIconEl = colorBadge.createDiv('dash-settings-badge-icon');
 		setIcon(colIconEl, col.icon);
 
@@ -335,14 +402,14 @@ export class DashboardSettingTab extends PluginSettingTab {
 		const swatchRow = editor.createDiv('dash-color-swatch-row');
 		COLLECTION_COLORS.forEach(c => {
 			const swatch = swatchRow.createDiv({ cls: `dash-color-swatch ${col.color === c ? 'active' : ''}` });
-			swatch.style.backgroundColor = c;
+			swatch.style.setProperty('background-color', c);
 			swatch.setAttribute('title', c);
 			swatch.onclick = async () => {
 				col.color = c;
 				swatchRow.querySelectorAll('.dash-color-swatch').forEach(s => s.removeClass('active'));
 				swatch.addClass('active');
 				item.style.setProperty('--col-color', c);
-				colorBadge.style.backgroundColor = c;
+				colorBadge.style.setProperty('background-color', c);
 				await this.plugin.saveSettings();
 			};
 			// Checkmark for selected
@@ -361,7 +428,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 					col.color = v;
 					swatchRow.querySelectorAll('.dash-color-swatch').forEach(s => s.removeClass('active'));
 					item.style.setProperty('--col-color', v);
-					colorBadge.style.backgroundColor = v;
+					colorBadge.style.setProperty('background-color', v);
 					await this.plugin.saveSettings();
 				})
 			);
