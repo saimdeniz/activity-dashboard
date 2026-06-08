@@ -1,6 +1,6 @@
 {
-  "id": "activity-dashboard",
-  "name": "Activity Dashboard",
+  "id": "dashboard",
+  "name": "Dashboard",
   "version": "1.0.0",
   "minAppVersion": "1.6.0",
   "description": "Interactive metadata visualization and activity dashboard for Obsidian. Create custom charts, timelines, and statistics cards directly from your note properties.",
