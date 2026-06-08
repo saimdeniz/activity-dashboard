@@ -12,7 +12,8 @@ export class FolderSuggest extends AbstractInputSuggest<TFolder> {
 	getSuggestions(query: string): TFolder[] {
 		const lower = query.toLowerCase();
 		return this.app.vault
-			.getAllFolders(true)
+			.getAllLoadedFiles()
+			.filter((f): f is TFolder => f instanceof TFolder)
 			.filter(f => f.path.toLowerCase().includes(lower))
 			.sort((a, b) => a.path.localeCompare(b.path))
 			.slice(0, 25);

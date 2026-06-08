@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, setIcon, Modal, App, Notice, TFile, SliderComponent, Menu, MenuItem } from 'obsidian';
+import { ItemView, WorkspaceLeaf, setIcon, Modal, App, Notice, TFile, SliderComponent, Menu } from 'obsidian';
 import { Chart, registerables } from 'chart.js';
 import type {
 	CollectionConfig, DashboardSettings, OverviewItem,
@@ -425,7 +425,7 @@ class AddWidgetModal extends Modal {
 				trueLabel: widgetType === 'boolean' ? trueLabelInput.value.trim() : undefined,
 				falseLabel: widgetType === 'boolean' ? falseLabelInput.value.trim() : undefined,
 			};
-			this.onSave(cfg);
+			void this.onSave(cfg);
 			this.close();
 		};
 	}
@@ -492,7 +492,7 @@ class AddOverviewWidgetModal extends Modal {
 			.onclick = () => this.close();
 
 		saveBtn.onclick = () => {
-			this.onSave(widgetType);
+			void this.onSave(widgetType);
 			this.close();
 		};
 	}
@@ -553,7 +553,7 @@ export class DashboardView extends ItemView {
 					new Notice('No widgets to copy!');
 					return;
 				}
-				DashboardView.copiedWidgets = JSON.parse(JSON.stringify(widgets));
+				DashboardView.copiedWidgets = JSON.parse(JSON.stringify(widgets)) as WidgetConfig[];
 				new Notice(`Copied ${widgets.length} widgets from ${col.name} (${this.activeMode}).`);
 			});
 		});
@@ -1039,7 +1039,7 @@ export class DashboardView extends ItemView {
 		// Load persisted settings or fall back to defaults
 		const legacy = this.settings.overviewMediaBreakdown ?? { size: { height: 'small', span: 6 }, chartType: 'doughnut' };
 		const resolvedBreakdownSize = migrateSize(item.size ?? legacy.size);
-		const chartType = (item.chartType ?? legacy.chartType ?? 'doughnut') as ChartType;
+		const chartType = item.chartType ?? legacy.chartType ?? 'doughnut';
 
 		const card = activeDocument.createElement('div');
 		card.className = `dash-widget ${sizeToClass(resolvedBreakdownSize)} dash-widget-pinref`;
