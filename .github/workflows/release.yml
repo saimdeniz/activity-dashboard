@@ -1,0 +1,40 @@
+name: Release Plugin
+on:
+  push:
+    tags:
+      - '*'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      attestations: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install Dependencies
+        run: npm ci
+      - name: Build Plugin
+        run: npm run build
+      - name: Generate Attestations for Release Assets
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: |
+            main.js
+            styles.css
+            manifest.json
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            main.js
+            styles.css
+            manifest.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
