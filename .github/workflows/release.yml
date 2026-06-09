@@ -48,5 +48,6 @@ jobs:
             dist/main.js
             dist/styles.css
             dist/manifest.json
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
