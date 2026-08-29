@@ -88,7 +88,7 @@ export class NoteEditModal extends Modal {
 
 	private normalizeValueForType(val: unknown, type: PropertyType): unknown {
 		if (type === 'list') {
-			if (Array.isArray(val)) return [...val];
+			if (Array.isArray(val)) return (val as unknown[]).slice();
 			if (typeof val === 'string' && val.trim()) {
 				if (val.includes(',') || val.includes('|')) {
 					return val.split(/[,|]/).map(s => s.trim()).filter(Boolean);

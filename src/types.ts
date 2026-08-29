@@ -87,6 +87,7 @@ export interface NoteDetailConfig {
 	statusField?: string;       // Frontmatter field for quick buttons (e.g. "ownership", "readStatus", "format")
 	statusOptions?: string[];   // Button options (e.g. ["Owned", "Wishlist", "Delisted"])
 	highlightFields?: string[]; // Selected highlight fields (max 8)
+	linksPosition?: 'cover' | 'topbar'; // 'cover' (under cover poster) or 'topbar' (topbar dropdown menu)
 }
 
 // ─── Collection Configuration ────────────────────────────────────────────────

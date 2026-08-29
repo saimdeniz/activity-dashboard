@@ -14,7 +14,7 @@ function isFieldEmpty(val: unknown): boolean {
 		return s === '' || s === '""' || s === "''" || s === '—' || s === '-' || s === 'null' || s === 'undefined' || s === '[]' || s === '{}';
 	}
 	if (Array.isArray(val)) return val.length === 0 || val.every(v => isFieldEmpty(v));
-	if (typeof val === 'object') return Object.keys(val as Record<string, unknown>).length === 0;
+	if (typeof val === 'object') return Object.keys(val).length === 0;
 	return false;
 }
 
@@ -96,11 +96,12 @@ export class NoteDetailModal extends Modal {
 		// ── Top bar (title + actions) ─────────────────────────────
 		const topbar = contentEl.createDiv('ndm-topbar');
 
-		const topbarTitle = topbar.createDiv('ndm-topbar-title');
-		topbarTitle.createEl('h2', { text: this.rec.title, cls: 'ndm-title', attr: { title: this.rec.title } });
+		const topbarLeft = topbar.createDiv('ndm-topbar-left');
+		topbarLeft.createEl('h2', { text: this.rec.title, cls: 'ndm-title', attr: { title: this.rec.title } });
 
-		// Badges row beneath title
-		const badges = topbarTitle.createDiv('ndm-badges');
+		// Metadata badges row beneath title
+		const metaRow = topbarLeft.createDiv('ndm-meta-row');
+		const badges = metaRow.createDiv('ndm-badges');
 		const creator = fields.author || fields.authors || fields.developers || fields.developer
 			|| fields.publishers || fields.publisher || fields.artist || fields.director;
 		if (!isFieldEmpty(creator)) {
@@ -130,12 +131,57 @@ export class NoteDetailModal extends Modal {
 			}
 		}
 
-		// Top bar action buttons
-		const topbarActions = topbar.createDiv('ndm-topbar-actions');
+		const linksPosition = this.col.noteDetailConfig?.linksPosition ?? 'cover';
 
-		// Customize View button
-		const custBtn = topbarActions.createEl('button', {
-			cls: 'ndm-action-btn ndm-btn-customize',
+		// Top bar primary action controls (Customize, Open Note, Edit, and Optional Links Dropdown)
+		const topbarActions = topbar.createDiv('ndm-topbar-actions');
+		const actionGroup = topbarActions.createDiv('ndm-action-group');
+
+		// Topbar Links Dropdown (if configured as 'topbar' and links exist)
+		if (links.length > 0 && linksPosition === 'topbar') {
+			const linksDropWrap = actionGroup.createDiv('dash-custom-dropdown ndm-links-dropdown-wrap');
+			const linksDropBtn = linksDropWrap.createEl('button', {
+				cls: 'ndm-links-dropdown-btn',
+				attr: { title: 'External Web Links' }
+			});
+			setIcon(linksDropBtn.createSpan('ndm-btn-icon'), 'link');
+			linksDropBtn.createSpan({ text: `Links (${links.length})` });
+			const arrow = linksDropBtn.createSpan('ndm-links-arrow');
+			setIcon(arrow, 'chevron-down');
+
+			const linksDropList = linksDropWrap.createDiv('ndm-links-dropdown-menu hidden');
+			links.forEach(lnk => {
+				const item = linksDropList.createEl('a', {
+					cls: 'ndm-links-dropdown-item',
+					attr: { href: lnk.url, target: '_blank', rel: 'noopener noreferrer' }
+				});
+				const left = item.createDiv('ndm-links-dropdown-left');
+				setIcon(left.createSpan('ndm-links-dropdown-icon'), lnk.icon);
+				left.createSpan({ text: lnk.label });
+				item.createSpan({ text: '↗', cls: 'ndm-links-dropdown-arrow' });
+				item.onclick = (e) => {
+					e.stopPropagation();
+					linksDropList.addClass('hidden');
+					linksDropBtn.removeClass('open');
+				};
+			});
+
+			linksDropBtn.onclick = (e) => {
+				e.stopPropagation();
+				const isOpen = !linksDropList.hasClass('hidden');
+				if (isOpen) {
+					linksDropList.addClass('hidden');
+					linksDropBtn.removeClass('open');
+				} else {
+					linksDropList.removeClass('hidden');
+					linksDropBtn.addClass('open');
+				}
+			};
+		}
+
+		// Customize button
+		const custBtn = actionGroup.createEl('button', {
+			cls: 'ndm-action-tool-btn',
 			attr: { title: 'Customize highlights and quick buttons' }
 		});
 		setIcon(custBtn.createSpan('ndm-btn-icon'), 'sliders-horizontal');
@@ -155,7 +201,24 @@ export class NoteDetailModal extends Modal {
 			}).open();
 		};
 
-		const editBtn = topbarActions.createEl('button', { cls: 'ndm-action-btn ndm-btn-accent', attr: { title: 'Edit properties' } });
+		// Open Note button
+		const noteBtn = actionGroup.createEl('button', {
+			cls: 'ndm-action-tool-btn',
+			attr: { title: 'Open Note in Obsidian Tab' }
+		});
+		setIcon(noteBtn.createSpan('ndm-btn-icon'), 'file-text');
+		noteBtn.createSpan({ text: 'Open Note' });
+		noteBtn.onclick = () => {
+			this.close();
+			if (this.onOpenNote) this.onOpenNote();
+			else void this.app.workspace.openLinkText(this.rec.filePath, '', true);
+		};
+
+		// Edit button (Prominent Primary CTA)
+		const editBtn = actionGroup.createEl('button', {
+			cls: 'ndm-action-primary-btn',
+			attr: { title: 'Edit frontmatter properties' }
+		});
 		setIcon(editBtn.createSpan('ndm-btn-icon'), 'edit-3');
 		editBtn.createSpan({ text: 'Edit' });
 		editBtn.onclick = () => {
@@ -167,36 +230,39 @@ export class NoteDetailModal extends Modal {
 			).open();
 		};
 
-		const noteBtn = topbarActions.createEl('button', { cls: 'ndm-action-btn', attr: { title: 'Open in Obsidian' } });
-		setIcon(noteBtn.createSpan('ndm-btn-icon'), 'external-link');
-		noteBtn.createSpan({ text: 'Open Note' });
-		noteBtn.onclick = () => {
-			this.close();
-			if (this.onOpenNote) this.onOpenNote();
-			else void this.app.workspace.openLinkText(this.rec.filePath, '', true);
-		};
-
-		// External link buttons
-		links.forEach(lnk => {
-			const btn = topbarActions.createEl('button', { cls: 'ndm-action-btn', attr: { title: lnk.label } });
-			setIcon(btn.createSpan('ndm-btn-icon'), lnk.icon);
-			btn.createSpan({ text: lnk.label });
-			btn.onclick = () => window.open(lnk.url, '_blank');
-		});
-
 		// ── Scrollable body ───────────────────────────────────────
 		const body = contentEl.createDiv('ndm-body');
 
-		// ── Hero section (cover + status side by side, fixed height) ──
+		// ── Hero section (cover left, status right, fixed height) ──
 		const hero = body.createDiv('ndm-hero');
 
-		// Cover
-		const coverBox = hero.createDiv('ndm-cover-box');
+		// Cover Column (Poster + Quick External Links underneath)
+		const coverCol = hero.createDiv('ndm-cover-col');
+		const coverBox = coverCol.createDiv('ndm-cover-box');
 		if (imageSrc) {
 			coverBox.createEl('img', { cls: 'ndm-cover-img', attr: { src: imageSrc, loading: 'lazy' } });
 		} else {
 			const ph = coverBox.createDiv('ndm-cover-placeholder');
 			setIcon(ph, this.col.icon || 'file-text');
+		}
+
+		// Dedicated Under-Cover Link Bar (only when linksPosition is 'cover')
+		if (links.length > 0 && linksPosition === 'cover') {
+			const linksWrap = coverCol.createDiv('ndm-cover-links');
+			links.forEach(lnk => {
+				const linkBtn = linksWrap.createEl('button', {
+					cls: 'ndm-cover-link-btn',
+					attr: { title: `Open in ${lnk.label}` }
+				});
+				const left = linkBtn.createDiv('ndm-cover-link-left');
+				setIcon(left.createSpan('ndm-cover-link-icon'), lnk.icon);
+				left.createSpan({ text: lnk.label, cls: 'ndm-cover-link-text' });
+				linkBtn.createSpan({ text: '↗', cls: 'ndm-cover-link-arrow' });
+				linkBtn.onclick = (e) => {
+					e.stopPropagation();
+					window.open(lnk.url, '_blank');
+				};
+			});
 		}
 
 		// Hero info panel (status + highlights)

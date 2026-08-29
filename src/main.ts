@@ -149,7 +149,7 @@ export default class LibraryDashPlugin extends Plugin {
 	private async openDashboard(): Promise<void> {
 		const existing = this.app.workspace.getLeavesOfType(VIEW_TYPE_DASHBOARD);
 		if (existing.length) {
-			await this.app.workspace.revealLeaf(existing[0]);
+			this.app.workspace.setActiveLeaf(existing[0], { focus: true });
 		} else {
 			const leaf = this.app.workspace.getLeaf(false);
 			await leaf.setViewState({ type: VIEW_TYPE_DASHBOARD, active: true });

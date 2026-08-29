@@ -6,6 +6,7 @@ export class NoteDetailCustomizeModal extends Modal {
 	private selectedHighlights: string[];
 	private selectedStatusField: string;
 	private statusOptionsText: string;
+	private selectedLinksPosition: 'cover' | 'topbar';
 
 	constructor(
 		app: App,
@@ -18,6 +19,7 @@ export class NoteDetailCustomizeModal extends Modal {
 		this.selectedHighlights = cfg.highlightFields ? [...cfg.highlightFields] : [];
 		this.selectedStatusField = cfg.statusField ?? '';
 		this.statusOptionsText = cfg.statusOptions ? cfg.statusOptions.join(', ') : '';
+		this.selectedLinksPosition = cfg.linksPosition ?? 'cover';
 	}
 
 	onOpen(): void {
@@ -49,7 +51,7 @@ export class NoteDetailCustomizeModal extends Modal {
 		headerLeft.createEl('h2', { text: `Customize "${this.col.name}" Detail View`, cls: 'ndm-cust-title' });
 
 		const headerDesc = contentEl.createDiv('ndm-cust-desc');
-		headerDesc.setText('Customize the quick status toggle buttons and choose up to 8 highlight properties to showcase in the note detail panel.');
+		headerDesc.setText('Configure status buttons, highlights, and external link positions.');
 
 		// ── Body ──────────────────────────────────────────────────
 		const body = contentEl.createDiv('ndm-cust-body');
@@ -58,10 +60,10 @@ export class NoteDetailCustomizeModal extends Modal {
 		const sec1 = body.createDiv('ndm-cust-section');
 		const sec1Header = sec1.createDiv('ndm-cust-sec-title');
 		setIcon(sec1Header.createSpan('ndm-cust-sec-icon'), 'toggle-left');
-		sec1Header.createSpan({ text: 'Quick Action / Status Buttons' });
+		sec1Header.createSpan({ text: 'Quick Status Buttons' });
 
 		sec1.createDiv({
-			text: 'Choose which frontmatter property creates quick toggle buttons (e.g. ownership, status, readStatus, format).',
+			text: 'Frontmatter property for toggle buttons (e.g. ownership, readStatus).',
 			cls: 'ndm-cust-sec-desc'
 		});
 
@@ -89,7 +91,7 @@ export class NoteDetailCustomizeModal extends Modal {
 
 		const optionsRow = sec1.createDiv('ndm-cust-input-row');
 		const optionsLabelRow = optionsRow.createDiv('ndm-cust-counter-row');
-		optionsLabelRow.createSpan({ text: 'Buttons (Comma separated):', cls: 'ndm-cust-label' });
+		optionsLabelRow.createSpan({ text: 'Buttons:', cls: 'ndm-cust-label' });
 		
 		const clearButtonsBtn = optionsLabelRow.createEl('button', { cls: 'ndm-cust-reset-btn', text: 'Clear' });
 
@@ -237,6 +239,61 @@ export class NoteDetailCustomizeModal extends Modal {
 
 		updateChips();
 
+		// ── Section 3: External Web Links Position ────────────────
+		const sec3 = body.createDiv('ndm-cust-section');
+		const sec3Header = sec3.createDiv('ndm-cust-sec-title');
+		setIcon(sec3Header.createSpan('ndm-cust-sec-icon'), 'link');
+		sec3Header.createSpan({ text: 'External Links' });
+
+		sec3.createDiv({
+			text: 'Display position for external database/store links.',
+			cls: 'ndm-cust-sec-desc'
+		});
+
+		const linkRow = sec3.createDiv('ndm-cust-input-row');
+		linkRow.createSpan({ text: 'Position:', cls: 'ndm-cust-label' });
+
+		const linkDropWrap = linkRow.createDiv('dash-custom-dropdown ndm-cust-dropdown');
+		const linkDropBtn = linkDropWrap.createDiv('dash-custom-dropdown-btn');
+		const linkDropLabel = linkDropBtn.createSpan({
+			text: this.selectedLinksPosition === 'topbar' ? 'Topbar Dropdown Menu (Links ▾)' : 'Under Cover Image (Default)'
+		});
+		const linkDropArrow = linkDropBtn.createSpan('dash-custom-dropdown-arrow');
+		setIcon(linkDropArrow, 'chevron-down');
+
+		const linkDropList = linkDropWrap.createDiv('dash-custom-dropdown-list hidden');
+
+		const linkOptions: [('cover' | 'topbar'), string][] = [
+			['cover', 'Under Cover Image (Default)'],
+			['topbar', 'Topbar Dropdown Menu (Links ▾)'],
+		];
+
+		linkOptions.forEach(([val, label]) => {
+			const item = linkDropList.createDiv(`dash-custom-dropdown-item ${this.selectedLinksPosition === val ? 'active' : ''}`);
+			item.setText(label);
+			item.onclick = (e) => {
+				e.stopPropagation();
+				this.selectedLinksPosition = val;
+				linkDropLabel.setText(label);
+				linkDropList.addClass('hidden');
+				linkDropBtn.removeClass('open');
+				linkDropList.querySelectorAll('.dash-custom-dropdown-item').forEach(el => el.removeClass('active'));
+				item.addClass('active');
+			};
+		});
+
+		linkDropBtn.onclick = (e) => {
+			e.stopPropagation();
+			const isOpen = !linkDropList.hasClass('hidden');
+			if (isOpen) {
+				linkDropList.addClass('hidden');
+				linkDropBtn.removeClass('open');
+			} else {
+				linkDropList.removeClass('hidden');
+				linkDropBtn.addClass('open');
+			}
+		};
+
 		// ── Footer ────────────────────────────────────────────────
 		const footer = contentEl.createDiv('ndm-cust-footer');
 
@@ -259,6 +316,7 @@ export class NoteDetailCustomizeModal extends Modal {
 
 			cfg.statusOptions = parsedOptions.length > 0 ? parsedOptions : undefined;
 			cfg.highlightFields = this.selectedHighlights.length > 0 ? this.selectedHighlights : undefined;
+			cfg.linksPosition = this.selectedLinksPosition;
 
 			try {
 				await this.onSave();
