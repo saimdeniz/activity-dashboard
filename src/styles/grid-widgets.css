@@ -1,0 +1,550 @@
+/* ═══════════════════════════════════════════════════════════════
+   Grid Layout, Vibrant Widget Cards, Sizing & Drag Handles
+   ═══════════════════════════════════════════════════════════════ */
+
+.dash-collection-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.dash-collection-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dash-col-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.dash-col-icon svg,
+.dash-col-icon .svg-icon {
+  width: 15px !important;
+  height: 15px !important;
+}
+
+.dash-col-icon-accent {
+  background-color: var(--interactive-accent);
+}
+
+.dash-col-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-normal);
+}
+
+.dash-add-widget-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: var(--col-fg, var(--interactive-accent)) !important;
+  color: var(--col-contrast, #fff) !important;
+  border: none !important;
+  box-shadow: 0 3px 12px rgba(var(--col-rgb, 129, 140, 248), 0.38) !important;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.dash-add-widget-btn:hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 16px rgba(var(--col-rgb, 129, 140, 248), 0.5) !important;
+}
+
+.dash-add-widget-btn svg,
+.dash-add-widget-btn .svg-icon {
+  width: 14px !important;
+  height: 14px !important;
+  stroke: currentColor !important;
+}
+
+/* ── 12-Column Grid ─────────────────────────────────────────── */
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-auto-rows: minmax(145px, auto);
+  grid-auto-flow: dense;
+  gap: 16px;
+  align-items: start;
+  width: 100%;
+}
+
+/* ── Vibrant Modern Widget Card ─────────────────────────────── */
+.dash-widget {
+  background: linear-gradient(175deg, rgba(var(--col-rgb, 129, 140, 248), 0.09) 0%, var(--background-secondary) 42%);
+  border: 1px solid rgba(var(--col-rgb, 129, 140, 248), 0.25);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: visible;
+  transition: box-shadow 0.22s ease, border-color 0.22s ease, transform 0.18s ease;
+  box-sizing: border-box;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.14), inset 0 1.5px 0 rgba(var(--col-rgb, 129, 140, 248), 0.4);
+}
+
+.dash-widget:hover {
+  border-color: rgba(var(--col-rgb, 129, 140, 248), 0.55);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.26), 0 0 20px rgba(var(--col-rgb, 129, 140, 248), 0.18);
+  transform: translateY(-2px);
+}
+
+/* Column Spans */
+.dash-widget-s3  { grid-column: span 3;  min-width: 0; }
+.dash-widget-s4  { grid-column: span 4;  min-width: 0; }
+.dash-widget-s6  { grid-column: span 6;  min-width: 0; }
+.dash-widget-s9  { grid-column: span 9;  min-width: 0; }
+.dash-widget-s12 { grid-column: span 12; min-width: 0; }
+
+@media (max-width: 900px) {
+  .dash-widget-s3, .dash-widget-s4 { grid-column: span 6; }
+  .dash-widget-s6, .dash-widget-s9, .dash-widget-s12 { grid-column: span 12; }
+}
+
+@media (max-width: 600px) {
+  .dash-widget-s3, .dash-widget-s4, .dash-widget-s6, .dash-widget-s9, .dash-widget-s12 { grid-column: span 12; }
+}
+
+/* Heights */
+.dash-widget-h-mini {
+  grid-row: span 1;
+  height: 145px;
+  min-height: 145px;
+  max-height: 145px;
+  overflow: hidden;
+}
+
+.dash-widget-h-small {
+  grid-row: span 2;
+  height: 306px;
+  min-height: 306px;
+  max-height: 306px;
+}
+
+/* Mini mode adjustments — retain compact stylish header */
+.dash-widget-h-mini .dash-widget-header {
+  padding: 5px 10px;
+  min-height: 28px;
+  border-bottom: 1px solid rgba(var(--col-rgb, 129, 140, 248), 0.12);
+}
+
+.dash-widget-h-mini .dash-widget-title {
+  font-size: 0.76rem;
+}
+
+.dash-widget-h-mini .dash-widget-body {
+  padding: 4px 10px 10px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+
+.dash-widget-h-mini .dash-number-card {
+  padding: 2px 4px;
+  gap: 2px;
+}
+
+.dash-widget-h-mini .dash-number-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  margin-bottom: 2px;
+}
+
+.dash-widget-h-mini .dash-number-icon svg,
+.dash-widget-h-mini .dash-number-icon .svg-icon {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+.dash-widget-h-mini .dash-number-value {
+  font-size: 1.65rem;
+}
+
+.dash-widget-h-mini .dash-number-label {
+  font-size: 0.66rem;
+}
+
+/* ── Header ─────────────────────────────────────────────────── */
+.dash-widget-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(var(--col-rgb, 129, 140, 248), 0.05);
+  border-bottom: 1px solid rgba(var(--col-rgb, 129, 140, 248), 0.15);
+  border-top-left-radius: 13px;
+  border-top-right-radius: 13px;
+  gap: 8px;
+  min-height: 38px;
+  box-sizing: border-box;
+}
+
+.dash-widget-drag-handle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  cursor: grab;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.dash-widget-drag-handle:hover {
+  background: var(--background-modifier-hover);
+}
+
+.dash-drag-line {
+  width: 12px;
+  height: 2px;
+  background-color: var(--text-faint);
+  border-radius: 1px;
+}
+
+.dash-widget-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.dash-widget-color-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px var(--col-fg, var(--collection-color));
+  background-color: var(--col-fg, var(--collection-color));
+}
+
+.dash-widget-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-normal);
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+.dash-widget-actions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  opacity: 0.75;
+  transition: opacity 0.15s ease;
+}
+
+.dash-widget:hover .dash-widget-actions {
+  opacity: 1;
+}
+
+.dash-widget-action-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s ease;
+}
+
+.dash-widget-action-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.dash-widget-action-btn.dash-action-delete:hover {
+  color: var(--text-error, #f87171);
+}
+
+.dash-widget-action-btn svg,
+.dash-widget-action-btn .svg-icon {
+  width: 13px !important;
+  height: 13px !important;
+}
+
+/* ── Body ───────────────────────────────────────────────────── */
+.dash-widget-body {
+  padding: 10px 14px 14px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+.dash-widget-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-faint);
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 16px;
+}
+
+/* ── Number Card Widget ─────────────────────────────────────── */
+.dash-number-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 6px;
+  text-align: center;
+  gap: 4px;
+}
+
+.dash-number-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(var(--col-rgb, 129, 140, 248), 0.14);
+  border: 1px solid rgba(var(--col-rgb, 129, 140, 248), 0.28);
+  box-shadow: 0 0 16px rgba(var(--col-rgb, 129, 140, 248), 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--col-fg, var(--collection-color));
+  margin-bottom: 4px;
+}
+
+.dash-number-icon svg,
+.dash-number-icon .svg-icon {
+  width: 24px !important;
+  height: 24px !important;
+}
+
+.dash-number-value {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--text-normal);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  text-shadow: 0 0 20px rgba(var(--col-rgb, 129, 140, 248), 0.25);
+}
+
+.dash-number-label {
+  font-size: 0.74rem;
+  color: var(--col-fg, var(--collection-color));
+  opacity: 0.95;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+/* ── Ranking Widget ─────────────────────────────────────────── */
+.dash-ranking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.dash-ranking-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: background 0.1s ease;
+}
+
+.dash-ranking-row:hover {
+  background: var(--background-modifier-hover);
+}
+
+.dash-ranking-pos {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-faint);
+  min-width: 16px;
+  text-align: right;
+}
+
+.dash-ranking-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.dash-ranking-label {
+  font-size: 0.8rem;
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-ranking-bar-track {
+  width: 100%;
+  height: 5px;
+  background: rgba(var(--col-rgb, 129, 140, 248), 0.12);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.dash-ranking-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, rgba(var(--col-rgb, 129, 140, 248), 0.65), var(--collection-color));
+  box-shadow: 0 0 6px rgba(var(--col-rgb, 129, 140, 248), 0.35);
+  transition: width 0.3s ease;
+}
+
+.dash-ranking-value {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* ── Canvas Container ───────────────────────────────────────── */
+.dash-canvas-container {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dash-canvas,
+.dash-canvas-wide,
+.dash-canvas-full {
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  display: block;
+}
+
+/* ── Activity Toolbar ───────────────────────────────────────── */
+.dash-activity-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+}
+
+.dash-activity-res-btn {
+  background: var(--background-secondary-alt);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.dash-activity-res-btn:hover {
+  color: var(--text-normal);
+  border-color: var(--interactive-accent);
+}
+
+/* ── Resize Handles ─────────────────────────────────────────── */
+.dash-widget-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -6px;
+  width: 14px;
+  height: 100%;
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 10;
+}
+
+.dash-widget-resize-handle::after {
+  content: '';
+  width: 4px;
+  height: 40px;
+  border-radius: 4px;
+  background: var(--interactive-accent);
+  box-shadow: 0 0 8px var(--interactive-accent);
+}
+
+.dash-widget:hover .dash-widget-resize-handle,
+.dash-widget.dash-resizing .dash-widget-resize-handle {
+  opacity: 1;
+}
+
+.dash-widget-height-handle {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 14px;
+  cursor: row-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 10;
+}
+
+.dash-widget-height-handle::after {
+  content: '';
+  width: 44px;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--interactive-accent);
+  box-shadow: 0 0 8px var(--interactive-accent);
+}
+
+.dash-widget:hover .dash-widget-height-handle,
+.dash-widget.dash-resizing .dash-widget-height-handle {
+  opacity: 1;
+}
+
+.dash-widget.dash-resizing {
+  transition: none !important;
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
+}
+
+/* Dragging & Drag Over */
+.dash-dragging {
+  opacity: 0.4;
+  border-style: dashed;
+}
+
+.dash-drag-over {
+  border-color: var(--interactive-accent) !important;
+  transform: scale(1.01);
+}
+

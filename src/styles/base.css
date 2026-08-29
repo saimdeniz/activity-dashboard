@@ -1,0 +1,121 @@
+/* ═══════════════════════════════════════════════════════════════
+   Dynamic Activity Dashboard — Base & View Shell
+   ═══════════════════════════════════════════════════════════════ */
+
+.dash-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-family: var(--font-interface);
+  overflow: hidden;
+  position: relative;
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+}
+
+.dash-content-outer {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  scroll-behavior: smooth;
+}
+
+.dash-content {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ── Common Custom Dropdown ─────────────────────────────────── */
+.dash-custom-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dash-custom-dropdown-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--text-normal);
+  transition: all 0.15s ease;
+  min-height: 32px;
+  box-sizing: border-box;
+}
+
+.dash-custom-dropdown-btn:hover {
+  background: var(--background-modifier-hover);
+  border-color: var(--interactive-accent);
+}
+
+.dash-custom-dropdown-btn.open {
+  border-color: var(--interactive-accent);
+}
+
+.dash-custom-dropdown-arrow svg {
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+
+.dash-custom-dropdown-btn.open .dash-custom-dropdown-arrow svg {
+  transform: rotate(180deg);
+}
+
+.dash-custom-dropdown-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  min-width: 160px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  z-index: 1000;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.dash-custom-dropdown-item {
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--text-normal);
+  transition: background 0.1s ease;
+}
+
+.dash-custom-dropdown-item:hover {
+  background: var(--background-modifier-hover);
+}
+
+.dash-custom-dropdown-item.active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent, #fff);
+  font-weight: 500;
+}
+
+.dash-hidden,
+.dash-custom-dropdown-list.hidden,
+.hidden {
+  display: none !important;
+}
+
+.dash-clickable {
+  cursor: pointer;
+}

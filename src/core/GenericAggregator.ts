@@ -1,5 +1,5 @@
-import type { RawRecord, Distribution, NumericSummary, ActivityData } from '../types';
-import { extractDate, getISOWeek } from '../utils/dateUtils';
+import type { RawRecord, Distribution, NumericSummary, ActivityData, HeatmapData } from '../types';
+import { extractDate, getISOWeek, formatDateUTC, toNumber } from '../utils/dateUtils';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
 	'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -294,9 +294,9 @@ export class GenericAggregator {
 			const d = extractDate(r.fields[dateField]);
 			if (!d) continue;
 
-			const m = d.getMonth();
+			const m = d.getUTCMonth();
 			const w = getISOWeek(d) - 1;
-			const y = String(d.getFullYear());
+			const y = String(d.getUTCFullYear());
 
 			if (m >= 0 && m < 12) monthly[m]++;
 			if (w >= 0 && w < 53) weekly[w]++;
@@ -304,6 +304,48 @@ export class GenericAggregator {
 		}
 
 		return { monthly, weekly, yearly };
+	}
+
+	/** Daily activity matrix data for GitHub-style heatmap */
+	static heatmap(
+		records: RawRecord[],
+		dateField: string,
+		numericField?: string,
+		targetYear?: number | 'all-time',
+	): HeatmapData {
+		const daily: Record<string, number> = {};
+		let total = 0;
+		let max = 0;
+
+		for (const r of records) {
+			const d = extractDate(r.fields[dateField]);
+			if (!d) continue;
+
+			if (targetYear && targetYear !== 'all-time' && d.getUTCFullYear() !== targetYear) {
+				continue;
+			}
+
+			const dateStr = formatDateUTC(d);
+			let val = 1;
+			if (numericField) {
+				val = toNumber(r.fields[numericField], 0);
+			}
+
+			if (val > 0) {
+				const current = (daily[dateStr] ?? 0) + val;
+				daily[dateStr] = Math.round(current * 100) / 100;
+				total += val;
+				if (daily[dateStr] > max) {
+					max = daily[dateStr];
+				}
+			}
+		}
+
+		return {
+			daily,
+			total: Math.round(total * 100) / 100,
+			max: Math.round(max * 100) / 100,
+		};
 	}
 
 	/** Month labels (for activity charts). */

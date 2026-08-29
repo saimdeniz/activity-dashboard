@@ -2,6 +2,7 @@ import { Chart } from 'chart.js';
 import type { RawRecord, WidgetConfig } from '../types';
 import { GenericAggregator } from '../core/GenericAggregator';
 import { generatePalette } from '../utils/ColorUtils';
+import { buildTooltipLabelCallback, buildScalesConfig } from '../utils/ChartUtils';
 
 /**
  * Renders a distribution chart (pie / doughnut / bar-horizontal / bar-vertical / polarArea)
@@ -47,16 +48,32 @@ export function renderDistributionWidget(params: {
 		}
 	});
 
-	const canvas = el.createEl('canvas', { cls: 'dash-canvas' });
+	const wrapper = el.createDiv('dash-canvas-container');
+	const canvas = wrapper.createEl('canvas', { cls: 'dash-canvas' });
 
 	const isHBar = chartType === 'bar-horizontal';
 	const isVBar = chartType === 'bar-vertical';
 	const isBar  = isHBar || isVBar;
 	const isLineOrRadar = chartType === 'line' || chartType === 'radar';
 
+	const isMini = config.size?.height === 'mini';
+	const isNarrow = (config.size?.span ?? 6) <= 4;
+
 	let displayLegend = !isBar;
-	if (config.legendPosition === 'hidden') displayLegend = false;
-	else if (config.legendPosition) displayLegend = true;
+	if (isMini) {
+		displayLegend = false;
+	} else if (config.legendPosition === 'hidden') {
+		displayLegend = false;
+	} else if (config.legendPosition) {
+		displayLegend = true;
+	}
+
+	let legendPos: 'top' | 'left' | 'bottom' | 'right' = 'right';
+	if (config.legendPosition && config.legendPosition !== 'hidden') {
+		legendPos = config.legendPosition;
+	} else if (isNarrow) {
+		legendPos = 'bottom';
+	}
 
 	charts.push(new Chart(canvas, {
 		type: isBar ? 'bar' : (chartType as 'line' | 'bar' | 'pie' | 'doughnut' | 'radar'),
@@ -79,6 +96,10 @@ export function renderDistributionWidget(params: {
 			responsive: true,
 			maintainAspectRatio: false,
 			animation: false,
+			cutout: chartType === 'doughnut' ? (isMini ? '52%' : '58%') : undefined,
+			layout: {
+				padding: isMini ? 2 : 6,
+			},
 			onClick: (e, activeElements: import('chart.js').ActiveElement[]) => {
 				if (onDrilldown && activeElements.length > 0) {
 					const index = activeElements[0].index;
@@ -88,57 +109,23 @@ export function renderDistributionWidget(params: {
 			plugins: {
 				legend: {
 					display: displayLegend,
-					position: config.legendPosition !== 'hidden' && config.legendPosition ? config.legendPosition : 'right',
+					position: legendPos,
 					labels: { 
 						color: text, 
-						boxWidth: 14, 
+						boxWidth: isNarrow ? 8 : 12, 
 						useBorderRadius: true,
-						borderRadius: 5,
-						font: { size: 11 } 
+						borderRadius: 4,
+						padding: isNarrow ? 6 : 8,
+						font: { size: isNarrow ? 10 : 11 } 
 					},
 				},
 				tooltip: {
 					callbacks: {
-						label: (context: import('chart.js').TooltipItem<'line' | 'bar' | 'pie' | 'doughnut'>) => {
-							let label = context.dataset.label || '';
-							if (label) {
-								label += ': ';
-							}
-							const val = context.raw as number;
-							label += val;
-							const chartType = (context.chart.config as { type?: string }).type;
-							if (chartType === 'pie' || chartType === 'doughnut') {
-								const dataArr = context.chart.data.datasets[0].data as number[];
-								const total = dataArr.reduce((a, b) => a + (Number(b) || 0), 0);
-								if (total > 0) {
-									const pct = ((val / total) * 100).toFixed(1);
-									label += ` (${pct}%)`;
-								}
-							}
-							return label;
-						}
+						label: buildTooltipLabelCallback()
 					}
 				}
 			},
-			scales: (isBar || chartType === 'line') ? {
-				x: {
-					ticks: { color: text, font: { size: 11 } },
-					grid: { color: isHBar ? gridColor : 'transparent' },
-					beginAtZero: true,
-				},
-				y: {
-					ticks: { color: text, font: { size: 11 } },
-					grid: { color: isVBar || chartType === 'line' ? gridColor : 'transparent' },
-					beginAtZero: true,
-				},
-			} : (chartType === 'radar' ? {
-				r: {
-					angleLines: { color: gridColor },
-					grid: { color: gridColor },
-					pointLabels: { color: text, font: { size: 10 } },
-					ticks: { showLabelBackdrop: false, color: text, font: { size: 9 } },
-				}
-			} : {}),
+			scales: buildScalesConfig(chartType, text, gridColor, isHBar),
 		},
 	}));
 }

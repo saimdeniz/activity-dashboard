@@ -2,6 +2,7 @@ import { setIcon } from 'obsidian';
 import type { Chart } from 'chart.js';
 import type { RawRecord, WidgetConfig } from '../types';
 import { GenericAggregator } from '../core/GenericAggregator';
+import { formatValue } from '../utils/ChartUtils';
 
 /**
  * Renders a single large metric card — sum / average / count / min / max
@@ -11,8 +12,8 @@ export function renderNumberCardWidget(params: {
 	el: HTMLElement;
 	records: RawRecord[];
 	config: WidgetConfig;
-	charts: Chart[];
-	cssVar: (v: string) => string;
+	charts?: Chart[];
+	cssVar?: (v: string) => string;
 	onDrilldown?: (filterValue: string | null) => void;
 }): void {
 	const { el, records, config, onDrilldown } = params;
@@ -40,18 +41,11 @@ export function renderNumberCardWidget(params: {
 	const iconEl = card.createDiv('dash-number-icon');
 	setIcon(iconEl, config.icon ?? 'hash');
 
-	card.createDiv({ text: formatValue(value), cls: 'dash-number-value' });
+	card.createDiv({ text: formatValue(value, 2), cls: 'dash-number-value' });
 	card.createDiv({ text: `${aggLabel[agg] ?? agg} · ${records.length} records`, cls: 'dash-number-label' });
 
 	if (onDrilldown) {
 		card.addClass('dash-clickable');
 		card.onclick = () => onDrilldown(null);
 	}
-}
-
-function formatValue(n: number): string {
-	if (n >= 10_000) return `${Math.round(n / 1000)}k`;
-	if (Number.isInteger(n)) return String(n);
-	// Show up to 2 decimal places, strip trailing zeros (e.g. 228.50 → 228.5, 228.45 → 228.45)
-	return parseFloat(n.toFixed(2)).toString();
 }

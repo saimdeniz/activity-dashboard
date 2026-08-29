@@ -1,11 +1,10 @@
-import { Chart, registerables } from 'chart.js';
+import { Chart } from 'chart.js';
 import { Menu } from 'obsidian';
 import type { RawRecord, WidgetConfig } from '../types';
 import { GenericAggregator } from '../core/GenericAggregator';
 import { CHART_PALETTE } from '../types';
 import { generatePalette } from '../utils/ColorUtils';
-
-Chart.register(...registerables);
+import { buildTooltipLabelCallback } from '../utils/ChartUtils';
 
 type Resolution = 'Monthly' | 'Weekly' | 'Yearly';
 
@@ -130,24 +129,7 @@ export function renderActivityWidget(params: {
 					},
 					tooltip: {
 						callbacks: {
-							label: (context: import('chart.js').TooltipItem<'line' | 'bar' | 'pie' | 'doughnut'>) => {
-								let label = context.dataset.label || '';
-								if (label) {
-									label += ': ';
-								}
-								const val = context.raw as number;
-								label += val;
-								const chartType = (context.chart.config as { type?: string }).type;
-								if (chartType === 'pie' || chartType === 'doughnut') {
-									const dataArr = context.chart.data.datasets[0].data as number[];
-									const total = dataArr.reduce((a, b) => a + (Number(b) || 0), 0);
-									if (total > 0) {
-										const pct = ((val / total) * 100).toFixed(1);
-										label += ` (${pct}%)`;
-									}
-								}
-								return label;
-							}
+							label: buildTooltipLabelCallback()
 						}
 					}
 				},

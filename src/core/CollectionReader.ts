@@ -1,4 +1,4 @@
-import type { App } from 'obsidian';
+import type { App, TFile } from 'obsidian';
 import type { CollectionConfig, RawRecord } from '../types';
 import { extractDate } from '../utils/dateUtils';
 
@@ -18,15 +18,24 @@ function shouldProrateField(key: string): boolean {
  * optionally filtering by year via the collection's dateField.
  */
 export class CollectionReader {
+	private static fileCache = new Map<string, { files: TFile[]; time: number }>();
+
 	constructor(private app: App) {}
+
+	static invalidateCache(collectionId?: string): void {
+		if (collectionId) {
+			CollectionReader.fileCache.delete(collectionId);
+		} else {
+			CollectionReader.fileCache.clear();
+		}
+	}
 
 	loadRecords(
 		config: CollectionConfig,
 		mode: 'year' | 'library',
 		year: number | 'all-time',
 	): RawRecord[] {
-		const allFiles = this.app.vault.getMarkdownFiles();
-		const files = this.filterFiles(allFiles, config);
+		const files = this.getCollectionFiles(config);
 		const records: RawRecord[] = [];
 
 		for (const file of files) {
@@ -122,14 +131,28 @@ export class CollectionReader {
 
 	/** Count of records in a collection (no year filtering). */
 	countAll(config: CollectionConfig): number {
+		return this.getCollectionFiles(config).length;
+	}
+
+	/** Returns cached or freshly filtered files for a collection */
+	getCollectionFiles(config: CollectionConfig): TFile[] {
+		const cached = CollectionReader.fileCache.get(config.id);
+		const now = Date.now();
+		// 30 second TTL cache per collection
+		if (cached && now - cached.time < 30000) {
+			return cached.files;
+		}
+
 		const allFiles = this.app.vault.getMarkdownFiles();
-		return this.filterFiles(allFiles, config).length;
+		const files = this.filterFiles(allFiles, config);
+		CollectionReader.fileCache.set(config.id, { files, time: now });
+		return files;
 	}
 
 	private filterFiles(
-		allFiles: ReturnType<App['vault']['getMarkdownFiles']>,
+		allFiles: TFile[],
 		config: CollectionConfig,
-	) {
+	): TFile[] {
 		if (config.scanMode === 'folder' && config.folderPath) {
 			const raw = config.folderPath;
 			const prefix = raw.endsWith('/') ? raw : raw + '/';

@@ -1,0 +1,231 @@
+/* ═══════════════════════════════════════════════════════════════
+   Top Bar, Page Header, Year Navigator & Vibrant Tabs
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Top Bar ────────────────────────────────────────────────── */
+.dash-topbar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 28px;
+  background: var(--background-primary);
+  border-bottom: 1px solid var(--background-modifier-border);
+  min-height: 64px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.dash-mode-switch {
+  display: flex;
+  background: var(--background-secondary-alt);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 3px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.dash-mode-btn {
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 6px 18px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.dash-mode-btn:hover {
+  color: var(--text-normal);
+}
+
+.dash-mode-btn.active {
+  background: var(--background-primary);
+  color: var(--active-theme-color, var(--interactive-accent));
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(var(--active-theme-rgb, 129, 140, 248), 0.35);
+}
+
+.dash-topbar-right {
+  position: absolute;
+  right: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+}
+
+.dash-nav-btn,
+.dash-refresh-btn {
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  min-height: 30px;
+  transition: all 0.14s ease;
+}
+
+.dash-nav-btn svg,
+.dash-nav-btn .svg-icon,
+.dash-refresh-btn svg,
+.dash-refresh-btn .svg-icon {
+  width: 15px !important;
+  height: 15px !important;
+}
+
+.dash-nav-btn:hover,
+.dash-refresh-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+  border-color: var(--active-theme-color, var(--interactive-accent));
+}
+
+.dash-nav-btn.active {
+  background: var(--active-theme-color, var(--interactive-accent));
+  color: var(--text-on-accent, #fff);
+  border-color: var(--active-theme-color, var(--interactive-accent));
+  box-shadow: 0 2px 8px rgba(var(--active-theme-rgb, 129, 140, 248), 0.35);
+}
+
+.dash-nav-btn:active,
+.dash-refresh-btn:active {
+  transform: scale(0.94);
+}
+
+.dash-year-label {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--active-theme-color, var(--interactive-accent));
+  min-width: 48px;
+  text-align: center;
+  user-select: none;
+}
+
+/* ── Page Header ────────────────────────────────────────────── */
+.dash-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 28px 12px;
+  background: var(--background-primary);
+  border-bottom: 1px solid var(--background-modifier-border);
+  flex-shrink: 0;
+}
+
+.dash-page-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.dash-page-header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(var(--active-theme-rgb, 129, 140, 248), 0.12);
+  border: 1px solid rgba(var(--active-theme-rgb, 129, 140, 248), 0.28);
+  box-shadow: 0 0 16px rgba(var(--active-theme-rgb, 129, 140, 248), 0.18);
+  color: var(--active-theme-color, var(--interactive-accent));
+  flex-shrink: 0;
+}
+
+.dash-page-header-icon svg,
+.dash-page-header-icon .svg-icon {
+  width: 22px !important;
+  height: 22px !important;
+}
+
+.dash-page-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dash-page-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-normal);
+  line-height: 1.2;
+}
+
+.dash-page-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* ── Tabs ───────────────────────────────────────────────────── */
+.dash-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 28px;
+  background: var(--background-primary);
+  border-bottom: 1px solid var(--background-modifier-border);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.dash-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  background: var(--background-secondary);
+  border: 1px solid rgba(var(--tab-rgb, 129, 140, 248), 0.22);
+  border-radius: 9px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.86rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.dash-tab:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+  border-color: var(--tab-color, var(--interactive-accent));
+}
+
+.dash-tab .dash-tab-icon {
+  color: var(--tab-color, var(--interactive-accent));
+  display: flex;
+  align-items: center;
+}
+
+.dash-tab .dash-tab-icon svg,
+.dash-tab .dash-tab-icon .svg-icon {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+.dash-tab.active {
+  background: var(--tab-active-bg, var(--interactive-accent)) !important;
+  color: var(--tab-text-color, var(--text-on-accent, #fff)) !important;
+  border-color: transparent !important;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(var(--tab-rgb, 129, 140, 248), 0.42);
+}
+
+.dash-tab.active .dash-tab-icon {
+  color: var(--tab-text-color, var(--text-on-accent, #fff)) !important;
+}
+
+.dash-tab.active .dash-tab-text {
+  color: var(--tab-text-color, var(--text-on-accent, #fff)) !important;
+}

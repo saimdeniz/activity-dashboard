@@ -1,6 +1,7 @@
 import { Chart } from 'chart.js';
 import { type RawRecord, type WidgetConfig, CHART_PALETTE } from '../types';
 import { GenericAggregator } from '../core/GenericAggregator';
+import { buildTooltipLabelCallback, buildScalesConfig, formatValue } from '../utils/ChartUtils';
 
 /**
  * Renders a ranked list of records by a numeric field value.
@@ -112,52 +113,11 @@ export function renderRankingWidget(params: {
 				},
 				tooltip: {
 					callbacks: {
-						label: (context: import('chart.js').TooltipItem<'line' | 'bar' | 'pie' | 'doughnut'>) => {
-							let label = context.dataset.label || '';
-							if (label) {
-								label += ': ';
-							}
-							const val = context.raw as number;
-							label += val;
-							const chartType = (context.chart.config as { type?: string }).type;
-							if (chartType === 'pie' || chartType === 'doughnut') {
-								const dataArr = context.chart.data.datasets[0].data as number[];
-								const total = dataArr.reduce((a, b) => a + (Number(b) || 0), 0);
-								if (total > 0) {
-									const pct = ((val / total) * 100).toFixed(1);
-									label += ` (${pct}%)`;
-								}
-							}
-							return label;
-						}
+						label: buildTooltipLabelCallback()
 					}
 				}
 			},
-			scales: (isBar || chartType === 'line') ? {
-				x: {
-					ticks: { color: text, font: { size: 11 } },
-					grid: { color: isHBar ? gridColor : 'transparent' },
-					beginAtZero: true,
-				},
-				y: {
-					ticks: { color: text, font: { size: 11 } },
-					grid: { color: isVBar || chartType === 'line' ? gridColor : 'transparent' },
-					beginAtZero: true,
-				},
-			} : (chartType === 'radar' ? {
-				r: {
-					angleLines: { color: gridColor },
-					grid: { color: gridColor },
-					pointLabels: { color: text, font: { size: 10 } },
-					ticks: { showLabelBackdrop: false, color: text, font: { size: 9 } },
-				}
-			} : {}),
+			scales: buildScalesConfig(chartType, text, gridColor, isHBar),
 		},
 	}));
-}
-
-function formatValue(n: number): string {
-	if (n >= 10_000) return `${Math.round(n / 1000)}k`;
-	if (Number.isInteger(n)) return String(n);
-	return n.toFixed(1);
 }

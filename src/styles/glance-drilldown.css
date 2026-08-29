@@ -1,0 +1,646 @@
+/* ═══════════════════════════════════════════════════════════════
+   Zen Browser "Glance" Flyout Drilldown System
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Glance Backdrop ────────────────────────────────────────── */
+.dash-glance-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  background: radial-gradient(circle at 50% 50%, rgba(var(--col-rgb, 129, 140, 248), 0.18) 0%, rgba(0, 0, 0, 0.78) 100%) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  z-index: var(--layer-popover, 90);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  overflow: hidden;
+  animation: dash-glance-fade-in 0.15s ease-out;
+}
+
+@keyframes dash-glance-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── Glance Floating Window ─────────────────────────────────── */
+.dash-glance-window {
+  background: radial-gradient(circle at 90% 10%, rgba(var(--col-rgb, 129, 140, 248), 0.18) 0%, transparent 55%),
+              radial-gradient(circle at 10% 90%, rgba(var(--col-rgb, 129, 140, 248), 0.12) 0%, transparent 45%),
+              radial-gradient(circle at 50% 50%, rgba(var(--col-rgb, 129, 140, 248), 0.05) 0%, transparent 70%),
+              var(--background-primary) !important;
+  border: 1px solid rgba(var(--col-rgb, 129, 140, 248), 0.35) !important;
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7), 0 0 35px rgba(var(--col-rgb, 129, 140, 248), 0.20) !important;
+  width: 100%;
+  max-width: 1180px;
+  height: 85vh;
+  max-height: 860px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+  transition: max-width 0.2s cubic-bezier(0.16, 1, 0.3, 1), max-height 0.2s cubic-bezier(0.16, 1, 0.3, 1), height 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: dash-glance-scale-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dash-glance-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.dash-glance-window.dash-glance-maximized {
+  width: 100% !important;
+  max-width: calc(100vw - 48px) !important;
+  height: calc(100vh - 48px) !important;
+  max-height: calc(100vh - 48px) !important;
+  border-radius: 16px !important;
+  margin: 0 !important;
+}
+
+/* ── Glance Header ──────────────────────────────────────────── */
+.dash-glance-header-container {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 24px 12px;
+  background: rgba(var(--col-rgb, 129, 140, 248), 0.06);
+  border-bottom: 1px solid rgba(var(--col-rgb, 129, 140, 248), 0.2);
+  backdrop-filter: blur(8px);
+  gap: 12px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.dash-glance-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dash-glance-title-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dash-glance-title-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(var(--col-rgb, 129, 140, 248), 0.12);
+  border-radius: 8px;
+  color: var(--col-fg, var(--interactive-accent));
+}
+
+.dash-glance-title-icon svg,
+.dash-glance-title-icon .svg-icon {
+  width: 18px !important;
+  height: 18px !important;
+  display: block !important;
+}
+
+.dash-glance-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-normal);
+}
+
+.dash-glance-title-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Action Buttons (Maximize, Config, Close) ───────────────── */
+.dash-glance-action-btn {
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  color: var(--text-normal);
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.dash-glance-action-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--col-fg, var(--interactive-accent));
+  border-color: var(--col-fg, var(--interactive-accent));
+  transform: scale(1.05);
+}
+
+.dash-glance-action-btn.active {
+  background: var(--col-fg, var(--interactive-accent));
+  color: var(--col-contrast, #fff);
+  border-color: var(--col-fg, var(--interactive-accent));
+}
+
+.dash-glance-action-btn.active svg,
+.dash-glance-action-btn.active .svg-icon {
+  color: var(--col-contrast, #fff) !important;
+  stroke: var(--col-contrast, #fff) !important;
+}
+
+.dash-glance-action-btn svg,
+.dash-glance-action-btn .svg-icon {
+  width: 18px !important;
+  height: 18px !important;
+  color: var(--text-normal) !important;
+  stroke: currentColor !important;
+  stroke-width: 2.2px !important;
+  display: block !important;
+}
+
+.dash-glance-close-btn:hover {
+  background: var(--background-modifier-error, rgba(239, 68, 68, 0.25)) !important;
+  border-color: var(--text-error, #ef4444) !important;
+}
+
+.dash-glance-close-btn:hover svg,
+.dash-glance-close-btn:hover .svg-icon {
+  color: var(--text-error, #ef4444) !important;
+  stroke: var(--text-error, #ef4444) !important;
+}
+
+/* ── Activity Year Nav inside Glance ────────────────────────── */
+.dash-activity-year-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 2px 6px;
+}
+
+.dash-activity-nav-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.dash-activity-nav-btn:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
+.dash-activity-nav-btn.active {
+  color: var(--col-fg, var(--interactive-accent));
+}
+
+.dash-activity-nav-btn svg,
+.dash-activity-nav-btn .svg-icon {
+  width: 14px !important;
+  height: 14px !important;
+  display: block !important;
+}
+
+.dash-activity-year-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--col-fg, var(--interactive-accent));
+  min-width: 44px;
+  text-align: center;
+}
+
+/* ── Glance Tabs ────────────────────────────────────────────── */
+.dash-glance-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  box-sizing: border-box;
+}
+
+.dash-glance-tab {
+  padding: 5px 12px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.12s ease;
+  box-sizing: border-box;
+}
+
+.dash-glance-tab:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+  border-color: var(--col-fg, var(--interactive-accent));
+}
+
+.dash-glance-tab.active {
+  background: var(--col-fg, var(--interactive-accent));
+  color: var(--col-contrast, #fff);
+  border-color: var(--col-fg, var(--interactive-accent));
+  font-weight: 600;
+  box-shadow: 0 2px 10px rgba(var(--col-rgb, 129, 140, 248), 0.35);
+}
+
+/* ── Glance Controls (Search & Sort) ────────────────────────── */
+.dash-glance-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+.dash-glance-search {
+  flex: 1;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  color: var(--text-normal);
+  box-sizing: border-box;
+}
+
+.dash-glance-search:focus {
+  border-color: var(--col-fg, var(--interactive-accent));
+  box-shadow: 0 0 0 2px rgba(var(--col-rgb, 129, 140, 248), 0.25);
+}
+
+.dash-glance-sort-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ── Glance Main Body ───────────────────────────────────────── */
+.dash-glance-main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.dash-glance-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px 24px;
+  box-sizing: border-box;
+}
+
+/* ── Config Panel (Drawer) ──────────────────────────────────── */
+.dash-glance-config-panel {
+  width: 280px;
+  background: var(--background-secondary);
+  border-left: 1px solid var(--background-modifier-border);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.dash-config-panel-heading {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-normal);
+}
+
+.dash-config-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dash-config-sublabel {
+  font-size: 0.75rem;
+  color: var(--text-faint);
+  margin-bottom: 8px;
+}
+
+.dash-config-pill-group {
+  display: flex;
+  gap: 4px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 3px;
+  box-sizing: border-box;
+}
+
+.dash-config-pill {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.dash-config-pill.active {
+  background: var(--col-fg, var(--interactive-accent));
+  color: var(--col-contrast, #fff);
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(var(--col-rgb, 129, 140, 248), 0.3);
+}
+
+.dash-config-pill-icon svg,
+.dash-config-pill-icon .svg-icon {
+  width: 14px !important;
+  height: 14px !important;
+  display: block !important;
+}
+
+.dash-config-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.dash-config-field-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--text-normal);
+}
+
+.dash-config-field-type {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: var(--text-faint);
+}
+
+/* ── Drilldown Card Grid ────────────────────────────────────── */
+.dash-drilldown-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--dd-card-min, 200px), 1fr));
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dash-drilldown-card {
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  gap: 8px;
+  transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+  box-sizing: border-box;
+}
+
+.dash-drilldown-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--col-fg, var(--interactive-accent));
+  box-shadow: 0 8px 24px rgba(var(--col-rgb, 129, 140, 248), 0.18);
+}
+
+.dash-drilldown-img-wrap {
+  width: 100%;
+  aspect-ratio: var(--dd-img-ratio, 1);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--background-secondary-alt);
+  box-sizing: border-box;
+}
+
+.dash-drilldown-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.dash-drilldown-card-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-normal);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  height: 2.6em;
+  word-break: break-word;
+}
+
+.dash-drilldown-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: auto;
+}
+
+.dash-drilldown-pill {
+  font-size: 0.72rem;
+  background: var(--background-primary);
+  border: 1px solid rgba(var(--col-rgb, 129, 140, 248), 0.2);
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: var(--text-muted);
+}
+
+.dash-drilldown-pill-label {
+  color: var(--col-fg, var(--text-faint));
+  font-weight: 500;
+}
+
+/* ── Drilldown Table View ───────────────────────────────────── */
+.dash-drilldown-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  box-sizing: border-box;
+}
+
+.dash-drilldown-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.dash-drilldown-table th,
+.dash-drilldown-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  text-align: left;
+}
+
+.dash-drilldown-table th {
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--background-secondary);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.dash-drilldown-table-row {
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.dash-drilldown-table-row:hover {
+  background: var(--background-modifier-hover);
+}
+
+.dash-drilldown-table-title {
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.dash-drilldown-quick-open {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0.9);
+  transition: all 0.15s ease;
+  cursor: pointer;
+  z-index: 2;
+  padding: 0;
+}
+
+.dash-drilldown-quick-edit {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0.9);
+  transition: all 0.15s ease;
+  cursor: pointer;
+  z-index: 2;
+  padding: 0;
+}
+
+.dash-drilldown-img-wrap {
+  position: relative;
+}
+
+.dash-drilldown-card:hover .dash-drilldown-quick-open,
+.dash-drilldown-card:hover .dash-drilldown-quick-edit {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.dash-drilldown-quick-open:hover,
+.dash-drilldown-quick-edit:hover {
+  background: var(--col-fg, var(--interactive-accent));
+  color: var(--col-contrast, #fff);
+  border-color: var(--col-fg, var(--interactive-accent));
+  transform: scale(1.1);
+}
+
+.dash-drilldown-quick-open svg,
+.dash-drilldown-quick-open .svg-icon,
+.dash-drilldown-quick-edit svg,
+.dash-drilldown-quick-edit .svg-icon {
+  width: 13px !important;
+  height: 13px !important;
+  stroke: currentColor !important;
+}
+
+.dash-drilldown-table-th-actions {
+  width: 40px;
+}
+
+.dash-drilldown-table-td-actions {
+  text-align: right;
+  width: 40px;
+}
+
+.dash-drilldown-table-open-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s ease;
+}
+
+.dash-drilldown-table-open-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--col-fg, var(--interactive-accent));
+  border-color: var(--background-modifier-border);
+}
+
+.dash-drilldown-table-open-btn svg,
+.dash-drilldown-table-open-btn .svg-icon {
+  width: 14px !important;
+  height: 14px !important;
+}

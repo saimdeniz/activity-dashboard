@@ -5,6 +5,7 @@ import { renderDistributionWidget } from '../widgets/DistributionWidget';
 import { renderNumberCardWidget } from '../widgets/NumberCardWidget';
 import { renderRankingWidget } from '../widgets/RankingWidget';
 import { renderActivityWidget } from '../widgets/ActivityWidget';
+import { renderHeatmapWidget } from '../widgets/HeatmapWidget';
 
 /**
  * WidgetFactory renders the body of a widget given its config and data.
@@ -57,6 +58,9 @@ export class WidgetFactory {
 			case 'activity':
 				renderActivityWidget(base);
 				break;
+			case 'heatmap':
+				renderHeatmapWidget(base);
+				break;
 			default:
 				body.createDiv({ text: `Unknown widget type: ${config.type}`, cls: 'dash-widget-empty' });
 		}
@@ -80,6 +84,7 @@ export const WIDGET_TYPE_LABELS: Record<string, string> = {
 	'number-card': 'Number Card',
 	ranking: 'Ranking List',
 	activity: 'Activity Chart',
+	heatmap: 'Activity Heatmap',
 	boolean: 'Boolean Chart',
 };
 

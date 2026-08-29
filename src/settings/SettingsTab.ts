@@ -3,10 +3,11 @@ import type { CollectionConfig, DashboardSettings } from '../types';
 import { COLLECTION_COLORS } from '../types';
 import { SchemaScanner } from '../core/SchemaScanner';
 import { FolderSuggest } from '../utils/FolderSuggest';
+import { NoteDetailCustomizeModal } from '../modals/NoteDetailCustomizeModal';
 import type LibraryDashPlugin from '../main';
 
 export const DEFAULT_SETTINGS: DashboardSettings = {
-	schemaVersion: 2,
+	schemaVersion: 3,
 	collections: [],
 	activeYear: new Date().getFullYear(),
 	activeMode: 'library',
@@ -408,6 +409,9 @@ export class DashboardSettingTab extends PluginSettingTab {
 				col.color = c;
 				swatchRow.querySelectorAll('.dash-color-swatch').forEach(s => s.removeClass('active'));
 				swatch.addClass('active');
+				swatchRow.querySelectorAll('.dash-swatch-check').forEach(chk => chk.remove());
+				const check = swatch.createDiv('dash-swatch-check');
+				setIcon(check, 'check');
 				item.style.setProperty('--col-color', c);
 				colorBadge.style.setProperty('background-color', c);
 				await this.plugin.saveSettings();
@@ -553,6 +557,27 @@ export class DashboardSettingTab extends PluginSettingTab {
 				preview.createDiv({ text: `+ ${col.schema.length - 20} more fields`, cls: 'dash-schema-more' });
 			}
 		}
+
+		// ── Note Detail Panel Customization ──────────────────────────────────
+		new Setting(editor)
+			.setName('Note Detail & Highlights')
+			.setDesc('Customize quick status toggle buttons and up to 8 highlight properties displayed in the note overview popup.')
+			.addButton(btn => {
+				btn.setButtonText('Customize Note Detail')
+					.setIcon('sliders-horizontal')
+					.onClick(() => {
+						new NoteDetailCustomizeModal(
+							this.app,
+							col,
+							async () => {
+								await this.plugin.saveSettings();
+							},
+							() => {
+								this.display();
+							}
+						).open();
+					});
+			});
 	}
 
 	// ── Helpers ────────────────────────────────────────────────────────────────

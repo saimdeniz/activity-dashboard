@@ -122,16 +122,28 @@ export class SchemaScanner {
 		const samples: string[] = [];
 
 		for (const v of values) {
-			if (samples.length >= 5) break;
+			if (samples.length >= 10) break;
 
-			if (type === 'array' && Array.isArray(v)) {
+			if (Array.isArray(v)) {
 				for (const item of v) {
-					if (samples.length >= 5) break;
-					const s = String(item).trim();
+					if (samples.length >= 10) break;
+					const s = String(item ?? '').trim();
 					if (s && !seen.has(s)) { seen.add(s); samples.push(s); }
 				}
-			} else {
-				const s = String(v ?? '').trim();
+			} else if (typeof v === 'string') {
+				const s = v.trim();
+				if (s.includes(',') || s.includes('|')) {
+					const parts = s.split(/[,|]/).map(p => p.trim()).filter(Boolean);
+					for (const p of parts) {
+						if (samples.length >= 10) break;
+						if (p && !seen.has(p)) { seen.add(p); samples.push(p); }
+					}
+				} else if (s && !seen.has(s)) {
+					seen.add(s);
+					samples.push(s);
+				}
+			} else if (v !== null && v !== undefined) {
+				const s = String(v).trim();
 				if (s && !seen.has(s)) { seen.add(s); samples.push(s); }
 			}
 		}

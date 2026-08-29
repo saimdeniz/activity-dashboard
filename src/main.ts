@@ -11,68 +11,95 @@ export default class LibraryDashPlugin extends Plugin {
 	private scanTimeout: number | null = null;
 
 	async onload(): Promise<void> {
-		await this.loadSettings();
+		try {
+			await this.loadSettings();
 
-		this.registerView(VIEW_TYPE_DASHBOARD, leaf => new DashboardView(leaf, this));
+			this.registerView(VIEW_TYPE_DASHBOARD, leaf => new DashboardView(leaf, this));
 
-		this.addRibbonIcon('layout-dashboard', 'Dashboard', () => {
-			void this.openDashboard();
-		});
+			this.addRibbonIcon('layout-dashboard', 'Dashboard', () => {
+				void this.openDashboard();
+			});
 
-		this.addCommand({
-			id: 'open-dashboard',
-			name: 'Open',
-			callback: () => void this.openDashboard(),
-		});
+			this.addCommand({
+				id: 'open-dashboard',
+				name: 'Open',
+				callback: () => void this.openDashboard(),
+			});
 
-		this.addSettingTab(new DashboardSettingTab(this.app, this));
+			this.addSettingTab(new DashboardSettingTab(this.app, this));
 
-		// Hook into Metadata changes to dynamically update schemas
-		this.registerEvent(
-			this.app.metadataCache.on('changed', (file) => {
-				this.scheduleSchemaRescan(file);
-			})
-		);
+			// Hook into Metadata changes to dynamically update schemas and invalidate cache
+			this.registerEvent(
+				this.app.metadataCache.on('changed', (file) => {
+					CollectionReader.invalidateCache();
+					this.scheduleSchemaRescan(file);
+				})
+			);
 
-		// Auto-redraw dashboards when the Obsidian theme changes (light/dark mode switch)
-		this.registerEvent(
-			this.app.workspace.on('css-change', () => {
-				for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_DASHBOARD)) {
-					const view = leaf.view as DashboardView;
-					view.refresh();
-				}
-			})
-		);
+			this.registerEvent(
+				this.app.vault.on('create', () => {
+					CollectionReader.invalidateCache();
+				})
+			);
+
+			this.registerEvent(
+				this.app.vault.on('delete', () => {
+					CollectionReader.invalidateCache();
+				})
+			);
+
+			this.registerEvent(
+				this.app.vault.on('rename', () => {
+					CollectionReader.invalidateCache();
+				})
+			);
+
+			// Auto-redraw dashboards when the Obsidian theme changes (light/dark mode switch)
+			this.registerEvent(
+				this.app.workspace.on('css-change', () => {
+					for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_DASHBOARD)) {
+						const view = leaf.view as DashboardView;
+						view.refresh();
+					}
+				})
+			);
+		} catch (err) {
+			console.error('[ActivityDashboard] Critical error during onload:', err);
+		}
 	}
 
 	private scheduleSchemaRescan(file?: TFile) {
 		if (this.scanTimeout) window.clearTimeout(this.scanTimeout);
 		this.scanTimeout = window.setTimeout(() => {
 			void (async () => {
-				let changed = false;
-				const scanner = new SchemaScanner(this.app);
-				const reader = new CollectionReader(this.app);
-				for (const col of this.settings.collections) {
-					if (file) {
-						if (!this.fileMatchesCollection(file, col)) continue;
-						const totalFiles = reader.countAll(col);
-						const colChanged = scanner.updateSchemaWithFile(file, col, totalFiles);
-						if (colChanged) changed = true;
-					} else {
-						const newSchema = await scanner.scan(col);
-						if (JSON.stringify(col.schema) !== JSON.stringify(newSchema)) {
-							col.schema = newSchema;
-							changed = true;
+				try {
+					let changed = false;
+					const scanner = new SchemaScanner(this.app);
+					const reader = new CollectionReader(this.app);
+					for (const col of this.settings.collections) {
+						if (file) {
+							if (!this.fileMatchesCollection(file, col)) continue;
+							const totalFiles = reader.countAll(col);
+							const colChanged = scanner.updateSchemaWithFile(file, col, totalFiles);
+							if (colChanged) changed = true;
+						} else {
+							const newSchema = await scanner.scan(col);
+							if (JSON.stringify(col.schema) !== JSON.stringify(newSchema)) {
+								col.schema = newSchema;
+								changed = true;
+							}
 						}
 					}
-				}
-				if (changed) {
-					await this.saveSettingsQuiet();
-					// Also refresh the UI config panel if it's currently open!
-					for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_DASHBOARD)) {
-						const view = leaf.view as DashboardView;
-						view.refresh();
+					if (changed) {
+						await this.saveSettingsQuiet();
+						// Also refresh the UI config panel if it's currently open!
+						for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_DASHBOARD)) {
+							const view = leaf.view as DashboardView;
+							view.refresh();
+						}
 					}
+				} catch (err) {
+					console.error('[ActivityDashboard] Error during scheduled schema rescan:', err);
 				}
 			})();
 		}, 10000); // 10s debounce to reduce CPU load during active typing

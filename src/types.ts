@@ -1,7 +1,7 @@
 // ─── Chart & Widget Enums ─────────────────────────────────────────────────────
 
 export type ChartType = 'list' | 'doughnut' | 'pie' | 'bar-horizontal' | 'bar-vertical' | 'line' | 'radar';
-export type WidgetType = 'distribution' | 'number-card' | 'ranking' | 'activity' | 'boolean';
+export type WidgetType = 'distribution' | 'number-card' | 'ranking' | 'activity' | 'heatmap' | 'boolean';
 
 /** Two-dimensional widget size: height (compact mini vs full small) × width (span 3/4/6/9/12) */
 export interface WidgetSize {
@@ -65,6 +65,7 @@ export interface WidgetConfig {
 	topN?: number;               // Limit entries (default 12)
 	pinnedToOverview?: boolean;
 	activityResolution?: 'Monthly' | 'Weekly' | 'Yearly';
+	heatmapIntensityField?: string; // Optional numeric field to calculate heatmap cell intensity instead of just count
 	trueLabel?: string;
 	falseLabel?: string;
 }
@@ -78,6 +79,14 @@ export interface DrilldownConfig {
 	imageField?: string;       // Resim field adı (yalnız Cards layoutunda gösterilir)
 	imageFit: 'cover' | 'contain';
 	imageAspectRatio: number;  // 0.25–2.50
+}
+
+// ─── Note Detail View Config ──────────────────────────────────────────────────
+
+export interface NoteDetailConfig {
+	statusField?: string;       // Frontmatter field for quick buttons (e.g. "ownership", "readStatus", "format")
+	statusOptions?: string[];   // Button options (e.g. ["Owned", "Wishlist", "Delisted"])
+	highlightFields?: string[]; // Selected highlight fields (max 8)
 }
 
 // ─── Collection Configuration ────────────────────────────────────────────────
@@ -102,6 +111,7 @@ export interface CollectionConfig {
 	libraryWidgets: WidgetConfig[];
 	yearWidgets: WidgetConfig[];
 	drilldownConfig?: DrilldownConfig;
+	noteDetailConfig?: NoteDetailConfig;
 	
 	// Deprecated fields kept for migration
 	widgets?: WidgetConfig[];
@@ -172,23 +182,39 @@ export interface ActivityData {
 	yearly: Record<string, number>;  // year string → count
 }
 
-// ─── Colour Palette ───────────────────────────────────────────────────────────
+/** Daily activity matrix data for the heatmap widget */
+export interface HeatmapData {
+	daily: Record<string, number>;  // YYYY-MM-DD -> count or numeric sum
+	total: number;
+	max: number;
+}
 
 export const COLLECTION_COLORS = [
-	'#818cf8', // indigo
-	'#f472b6', // pink
-	'#4ade80', // emerald
-	'#fb923c', // orange
-	'#22d3ee', // cyan
-	'#a78bfa', // violet
-	'#facc15', // amber
-	'#fb7185', // rose
-	'#34d399', // teal
-	'#60a5fa', // blue
+	'#818cf8', // Indigo
+	'#6366f1', // Deep Indigo
+	'#3b82f6', // Sapphire Blue
+	'#0ea5e9', // Sky Blue
+	'#06b6d4', // Cyan
+	'#14b8a6', // Teal
+	'#10b981', // Emerald
+	'#22c55e', // Green
+	'#84cc16', // Lime
+	'#eab308', // Amber / Gold
+	'#f59e0b', // Warm Amber
+	'#f97316', // Orange
+	'#ea580c', // Sunset Orange
+	'#ef4444', // Crimson Red
+	'#f43f5e', // Rose
+	'#ec4899', // Pink
+	'#d946ef', // Fuchsia
+	'#a855f7', // Purple
+	'#8b5cf6', // Violet
+	'#64748b', // Slate
 ] as const;
 
 export const CHART_PALETTE = [
 	'#818cf8', '#f472b6', '#4ade80', '#fb923c',
 	'#22d3ee', '#a78bfa', '#facc15', '#fb7185',
-	'#34d399', '#60a5fa',
+	'#34d399', '#60a5fa', '#a855f7', '#f43f5e',
 ] as const;
+
