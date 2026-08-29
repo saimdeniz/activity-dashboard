@@ -1,9 +1,8 @@
 {
   "id": "activity-dashboard",
   "name": "Activity Dashboard",
-  "version": "1.0.3",
   "minAppVersion": "1.4.0",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "minAppVersion": "1.7.2",
   "description": "Interactive metadata visualization and activity dashboard. Create custom charts, timelines, and statistics cards directly from your note properties.",
   "author": "saimd",
