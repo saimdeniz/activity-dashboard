@@ -169,7 +169,7 @@ export function renderHeatmapWidget(params: {
 				if (!isCurrentTargetYear) {
 					cell.addClass('dash-heatmap-cell-outside');
 				} else {
-					cell.style.setProperty('background-color', getCellColor(cellVal, data.max));
+					cell.setCssStyles({ backgroundColor: getCellColor(cellVal, data.max) });
 					const valLabel = numericField ? `${cellVal} (${numericField})` : `${cellVal} record${cellVal === 1 ? '' : 's'}`;
 					const tooltip = `${cellDateStr}: ${valLabel}`;
 					cell.setAttribute('aria-label', tooltip);
@@ -177,7 +177,6 @@ export function renderHeatmapWidget(params: {
 
 					if (cellVal > 0 && onDrilldown) {
 						cell.addClass('dash-clickable');
-						cell.style.cursor = 'pointer';
 						cell.onclick = (e) => {
 							e.stopPropagation();
 							onDrilldown(cellDateStr);
@@ -196,7 +195,7 @@ export function renderHeatmapWidget(params: {
 		const totalWeeks = Math.max(weekIdx, 52);
 		monthPositions.forEach(({ month, weekIdx: wIdx }) => {
 			const monthLabel = monthsHeader.createDiv('dash-heatmap-month-label');
-			monthLabel.style.setProperty('left', `${(wIdx / totalWeeks) * 100}%`);
+			monthLabel.setCssStyles({ left: `${(wIdx / totalWeeks) * 100}%` });
 			monthLabel.setText(MONTH_NAMES[month]);
 		});
 
@@ -208,7 +207,7 @@ export function renderHeatmapWidget(params: {
 		const levels = [0, 0.25, 0.5, 0.75, 1.0];
 		levels.forEach((lvl) => {
 			const swatch = legend.createDiv('dash-heatmap-legend-cell');
-			swatch.style.setProperty('background-color', getCellColor(lvl > 0 ? (lvl * (data.max || 1)) : 0, data.max || 1));
+			swatch.setCssStyles({ backgroundColor: getCellColor(lvl > 0 ? (lvl * (data.max || 1)) : 0, data.max || 1) });
 		});
 
 		legend.createSpan({ text: 'More', cls: 'dash-heatmap-legend-text' });

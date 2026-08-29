@@ -11,7 +11,7 @@
   bottom: 0;
   width: 100vw;
   height: 100vh;
-  background: radial-gradient(circle at 50% 50%, rgba(var(--col-rgb, 129, 140, 248), 0.18) 0%, rgba(0, 0, 0, 0.78) 100%) !important;
+  background: radial-gradient(circle at 50% 50%, rgba(var(--col-rgb, 129, 140, 248), 0.18) 0%, rgba(0, 0, 0, 0.78) 100%);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   z-index: var(--layer-popover, 90);
@@ -34,10 +34,10 @@
   background: radial-gradient(circle at 90% 10%, rgba(var(--col-rgb, 129, 140, 248), 0.18) 0%, transparent 55%),
               radial-gradient(circle at 10% 90%, rgba(var(--col-rgb, 129, 140, 248), 0.12) 0%, transparent 45%),
               radial-gradient(circle at 50% 50%, rgba(var(--col-rgb, 129, 140, 248), 0.05) 0%, transparent 70%),
-              var(--background-primary) !important;
-  border: 1px solid rgba(var(--col-rgb, 129, 140, 248), 0.35) !important;
+              var(--background-primary);
+  border: 1px solid rgba(var(--col-rgb, 129, 140, 248), 0.35);
   border-radius: 16px;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7), 0 0 35px rgba(var(--col-rgb, 129, 140, 248), 0.20) !important;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7), 0 0 35px rgba(var(--col-rgb, 129, 140, 248), 0.20);
   width: 100%;
   max-width: 1180px;
   height: 85vh;
@@ -63,12 +63,12 @@
 }
 
 .dash-glance-window.dash-glance-maximized {
-  width: 100% !important;
-  max-width: calc(100vw - 48px) !important;
-  height: calc(100vh - 48px) !important;
-  max-height: calc(100vh - 48px) !important;
-  border-radius: 16px !important;
-  margin: 0 !important;
+  width: 100%;
+  max-width: calc(100vw - 48px);
+  height: calc(100vh - 48px);
+  max-height: calc(100vh - 48px);
+  border-radius: 16px;
+  margin: 0;
 }
 
 /* ── Glance Header ──────────────────────────────────────────── */
@@ -82,6 +82,8 @@
   gap: 12px;
   flex-shrink: 0;
   box-sizing: border-box;
+  position: relative;
+  z-index: 100;
 }
 
 .dash-glance-title-row {
@@ -109,9 +111,9 @@
 
 .dash-glance-title-icon svg,
 .dash-glance-title-icon .svg-icon {
-  width: 18px !important;
-  height: 18px !important;
-  display: block !important;
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 .dash-glance-title {
@@ -160,29 +162,29 @@
 
 .dash-glance-action-btn.active svg,
 .dash-glance-action-btn.active .svg-icon {
-  color: var(--col-contrast, #fff) !important;
-  stroke: var(--col-contrast, #fff) !important;
+  color: var(--col-contrast, #fff);
+  stroke: var(--col-contrast, #fff);
 }
 
 .dash-glance-action-btn svg,
 .dash-glance-action-btn .svg-icon {
-  width: 18px !important;
-  height: 18px !important;
-  color: var(--text-normal) !important;
-  stroke: currentColor !important;
-  stroke-width: 2.2px !important;
-  display: block !important;
+  width: 18px;
+  height: 18px;
+  color: var(--text-normal);
+  stroke: currentColor;
+  stroke-width: 2.2px;
+  display: block;
 }
 
 .dash-glance-close-btn:hover {
-  background: var(--background-modifier-error, rgba(239, 68, 68, 0.25)) !important;
-  border-color: var(--text-error, #ef4444) !important;
+  background: var(--background-modifier-error, rgba(239, 68, 68, 0.25));
+  border-color: var(--text-error, #ef4444);
 }
 
 .dash-glance-close-btn:hover svg,
 .dash-glance-close-btn:hover .svg-icon {
-  color: var(--text-error, #ef4444) !important;
-  stroke: var(--text-error, #ef4444) !important;
+  color: var(--text-error, #ef4444);
+  stroke: var(--text-error, #ef4444);
 }
 
 /* ── Activity Year Nav inside Glance ────────────────────────── */
@@ -218,9 +220,9 @@
 
 .dash-activity-nav-btn svg,
 .dash-activity-nav-btn .svg-icon {
-  width: 14px !important;
-  height: 14px !important;
-  display: block !important;
+  width: 14px;
+  height: 14px;
+  display: block;
 }
 
 .dash-activity-year-label {
@@ -302,6 +304,19 @@
   flex-shrink: 0;
 }
 
+.dash-glance-sort-wrap .dash-custom-dropdown {
+  width: auto;
+  min-width: 140px;
+}
+
+.dash-glance-sort-wrap .dash-custom-dropdown-list {
+  min-width: 170px;
+  width: max-content;
+  right: 0;
+  left: auto;
+  z-index: 3000;
+}
+
 /* ── Glance Main Body ───────────────────────────────────────── */
 .dash-glance-main {
   flex: 1;
@@ -321,46 +336,98 @@
 
 /* ── Config Panel (Drawer) ──────────────────────────────────── */
 .dash-glance-config-panel {
-  width: 280px;
-  background: var(--background-secondary);
-  border-left: 1px solid var(--background-modifier-border);
-  padding: 16px;
+  width: 290px;
+  background: radial-gradient(ellipse at 100% 0%, rgba(var(--col-rgb, 129, 140, 248), 0.12) 0%, transparent 70%),
+              linear-gradient(180deg, rgba(var(--col-rgb, 129, 140, 248), 0.05) 0%, rgba(var(--col-rgb, 129, 140, 248), 0.02) 100%),
+              var(--background-secondary);
+  border-left: 1px solid rgba(var(--col-rgb, 129, 140, 248), 0.22);
+  box-shadow: inset 1px 0 16px rgba(var(--col-rgb, 129, 140, 248), 0.05);
+  padding: 20px 18px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
   overflow-y: auto;
   flex-shrink: 0;
   box-sizing: border-box;
 }
 
+.dash-glance-config-panel.hidden,
+.dash-glance-config-panel.dash-hidden {
+  display: none;
+}
+
 .dash-config-panel-heading {
-  font-size: 0.95rem;
-  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.02rem;
+  font-weight: 800;
   color: var(--text-normal);
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(var(--col-rgb, 129, 140, 248), 0.20);
+  margin-bottom: 2px;
+}
+
+.dash-config-panel-heading .dash-config-heading-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(var(--col-rgb, 129, 140, 248), 0.18);
+  color: var(--col-fg, var(--interactive-accent));
+  border: 1px solid rgba(var(--col-rgb, 129, 140, 248), 0.35);
+  box-shadow: 0 0 12px rgba(var(--col-rgb, 129, 140, 248), 0.22);
+}
+
+.dash-config-panel-heading .dash-config-heading-icon svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.2px;
+}
+
+.dash-config-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .dash-config-label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--col-fg, var(--interactive-accent));
   margin-bottom: 6px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dash-config-label::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 12px;
+  background: var(--col-fg, var(--interactive-accent));
+  border-radius: 2px;
+  box-shadow: 0 0 6px rgba(var(--col-rgb, 129, 140, 248), 0.45);
 }
 
 .dash-config-sublabel {
   font-size: 0.75rem;
   color: var(--text-faint);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .dash-config-pill-group {
   display: flex;
-  gap: 4px;
-  background: var(--background-primary);
-  border: 1px solid var(--background-modifier-border);
+  gap: 5px;
+  background: rgba(var(--col-rgb, 129, 140, 248), 0.06);
+  border: 1px solid rgba(var(--col-rgb, 129, 140, 248), 0.22);
   border-radius: 8px;
-  padding: 3px;
+  padding: 4px;
   box-sizing: border-box;
 }
 
@@ -370,51 +437,134 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 4px 8px;
+  padding: 6px 10px;
   background: transparent;
   border: none;
   border-radius: 6px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--text-muted);
   cursor: pointer;
   box-sizing: border-box;
+  transition: all 0.15s ease;
+}
+
+.dash-config-pill:hover {
+  background: rgba(var(--col-rgb, 129, 140, 248), 0.15);
+  color: var(--text-normal);
 }
 
 .dash-config-pill.active {
-  background: var(--col-fg, var(--interactive-accent));
+  background: linear-gradient(135deg, var(--col-fg, var(--interactive-accent)) 0%, rgba(var(--col-rgb, 129, 140, 248), 0.9) 100%);
   color: var(--col-contrast, #fff);
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(var(--col-rgb, 129, 140, 248), 0.3);
+  font-weight: 700;
+  box-shadow: 0 3px 12px rgba(var(--col-rgb, 129, 140, 248), 0.45);
 }
 
 .dash-config-pill-icon svg,
 .dash-config-pill-icon .svg-icon {
-  width: 14px !important;
-  height: 14px !important;
-  display: block !important;
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+.dash-glance-config-panel input[type="range"] {
+  accent-color: var(--col-fg, var(--interactive-accent));
+  cursor: pointer;
+}
+
+.dash-glance-config-panel .dash-custom-dropdown-btn {
+  background: rgba(var(--col-rgb, 129, 140, 248), 0.06);
+  border: 1px solid rgba(var(--col-rgb, 129, 140, 248), 0.25);
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.dash-glance-config-panel .dash-custom-dropdown-btn:hover,
+.dash-glance-config-panel .dash-custom-dropdown-btn.open {
+  border-color: var(--col-fg, var(--interactive-accent));
+  background: rgba(var(--col-rgb, 129, 140, 248), 0.12);
+  box-shadow: 0 0 10px rgba(var(--col-rgb, 129, 140, 248), 0.20);
 }
 
 .dash-config-fields {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  max-height: 200px;
-  overflow-y: auto;
+  gap: 4px;
+  background: rgba(var(--col-rgb, 129, 140, 248), 0.05);
+  border: 1px solid rgba(var(--col-rgb, 129, 140, 248), 0.18);
+  border-radius: 10px;
+  padding: 6px;
   box-sizing: border-box;
 }
 
 .dash-config-field-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.8rem;
+  gap: 9px;
+  font-size: 0.82rem;
   color: var(--text-normal);
+  padding: 6px 8px;
+  border-radius: 6px;
+  transition: background 0.12s ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+.dash-config-field-row:hover {
+  background: rgba(var(--col-rgb, 129, 140, 248), 0.14);
+}
+
+.dash-config-field-row input[type="checkbox"] {
+  accent-color: var(--col-fg, var(--interactive-accent));
+  cursor: pointer;
+  width: 15px;
+  height: 15px;
 }
 
 .dash-config-field-type {
   margin-left: auto;
-  font-size: 0.7rem;
-  color: var(--text-faint);
+  font-size: 0.70rem;
+  font-weight: 600;
+  color: var(--col-fg, var(--interactive-accent));
+  background: rgba(var(--col-rgb, 129, 140, 248), 0.14);
+  border: 1px solid rgba(var(--col-rgb, 129, 140, 248), 0.25);
+  padding: 1px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.dash-config-customize-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(var(--col-rgb, 129, 140, 248), 0.12);
+  color: var(--col-fg, var(--interactive-accent));
+  border: 1px solid rgba(var(--col-rgb, 129, 140, 248), 0.35);
+  box-shadow: 0 2px 8px rgba(var(--col-rgb, 129, 140, 248), 0.15);
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.dash-config-customize-btn:hover {
+  background: var(--col-fg, var(--interactive-accent));
+  color: var(--col-contrast, #fff);
+  box-shadow: 0 4px 14px rgba(var(--col-rgb, 129, 140, 248), 0.40);
+  border-color: transparent;
+  transform: translateY(-1px);
+}
+
+.dash-config-customize-btn .dash-config-pill-icon svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.2px;
 }
 
 /* ── Drilldown Card Grid ────────────────────────────────────── */
@@ -606,9 +756,9 @@
 .dash-drilldown-quick-open .svg-icon,
 .dash-drilldown-quick-edit svg,
 .dash-drilldown-quick-edit .svg-icon {
-  width: 13px !important;
-  height: 13px !important;
-  stroke: currentColor !important;
+  width: 13px;
+  height: 13px;
+  stroke: currentColor;
 }
 
 .dash-drilldown-table-th-actions {
@@ -641,6 +791,6 @@
 
 .dash-drilldown-table-open-btn svg,
 .dash-drilldown-table-open-btn .svg-icon {
-  width: 14px !important;
-  height: 14px !important;
+  width: 14px;
+  height: 14px;
 }

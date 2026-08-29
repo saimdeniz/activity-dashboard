@@ -14,7 +14,7 @@ function isFieldEmpty(val: unknown): boolean {
 		return s === '' || s === '""' || s === "''" || s === '—' || s === '-' || s === 'null' || s === 'undefined' || s === '[]' || s === '{}';
 	}
 	if (Array.isArray(val)) return val.length === 0 || val.every(v => isFieldEmpty(v));
-	if (typeof val === 'object') return Object.keys(val as object).length === 0;
+	if (typeof val === 'object') return Object.keys(val as Record<string, unknown>).length === 0;
 	return false;
 }
 
@@ -31,7 +31,7 @@ export class NoteDetailModal extends Modal {
 	}
 
 	onOpen(): void {
-		this.containerEl.style.setProperty('z-index', '3500', 'important');
+		this.containerEl.setCssStyles({ zIndex: '3500' });
 		this.modalEl.addClass('dash-modal-dialog', 'dash-note-detail-dialog');
 
 		const { contentEl } = this;
@@ -44,10 +44,12 @@ export class NoteDetailModal extends Modal {
 		const colRgb = hexToRgbString(colFg);
 		const colContrast = getContrastTextColor(colFg);
 
-		this.modalEl.style.setProperty('--collection-color', baseColor);
-		this.modalEl.style.setProperty('--col-fg', colFg);
-		this.modalEl.style.setProperty('--col-rgb', colRgb);
-		this.modalEl.style.setProperty('--col-contrast', colContrast);
+		this.modalEl.setCssProps({
+			'--collection-color': baseColor,
+			'--col-fg': colFg,
+			'--col-rgb': colRgb,
+			'--col-contrast': colContrast,
+		});
 
 		const fields = this.rec.fields;
 
@@ -102,7 +104,7 @@ export class NoteDetailModal extends Modal {
 		const creator = fields.author || fields.authors || fields.developers || fields.developer
 			|| fields.publishers || fields.publisher || fields.artist || fields.director;
 		if (!isFieldEmpty(creator)) {
-			const text = Array.isArray(creator) ? creator[0] : String(creator);
+			const text = Array.isArray(creator) ? String(creator[0] ?? '') : String(creator);
 			if (text.trim()) {
 				const b = badges.createDiv('ndm-badge');
 				setIcon(b.createSpan(), 'user');
@@ -222,7 +224,7 @@ export class NoteDetailModal extends Modal {
 			if (customOptions && customOptions.length > 0) {
 				rawOptions = [...customOptions];
 			} else {
-				const schemaField = (this.col.schema || []).find(s => s.key.toLowerCase() === statusKey!.toLowerCase());
+				const schemaField = (this.col.schema || []).find(s => s.key.toLowerCase() === statusKey.toLowerCase());
 				rawOptions = schemaField?.sampleValues && schemaField.sampleValues.length > 0 ? [...schemaField.sampleValues] : [];
 
 				if (rawOptions.length === 0) {
@@ -268,7 +270,7 @@ export class NoteDetailModal extends Modal {
 							pill.addClass('ndm-pill-active');
 						}
 						currentValues = updated;
-						await this.updateSingleProperty(statusKey!, updated);
+						await this.updateSingleProperty(statusKey, updated);
 					} else if (typeof rawVal === 'string' && (rawVal.includes(',') || rawVal.includes('|'))) {
 						let updated: string[];
 						if (currentValues.some(cv => cv.toLowerCase() === opt.toLowerCase())) {
@@ -279,17 +281,17 @@ export class NoteDetailModal extends Modal {
 							pill.addClass('ndm-pill-active');
 						}
 						currentValues = updated;
-						await this.updateSingleProperty(statusKey!, updated.join(', '));
+						await this.updateSingleProperty(statusKey, updated.join(', '));
 					} else {
 						if (currentValues.some(cv => cv.toLowerCase() === opt.toLowerCase())) {
 							currentValues = [];
 							pill.removeClass('ndm-pill-active');
-							await this.updateSingleProperty(statusKey!, '');
+							await this.updateSingleProperty(statusKey, '');
 						} else {
 							currentValues = [opt];
 							pillRow.querySelectorAll('.ndm-pill').forEach(p => p.removeClass('ndm-pill-active'));
 							pill.addClass('ndm-pill-active');
-							await this.updateSingleProperty(statusKey!, opt);
+							await this.updateSingleProperty(statusKey, opt);
 						}
 					}
 				};
@@ -380,7 +382,7 @@ export class NoteDetailModal extends Modal {
 		const tfile = this.app.vault.getAbstractFileByPath(this.rec.filePath);
 		if (!(tfile instanceof TFile)) return;
 		try {
-			await this.app.fileManager.processFrontMatter(tfile, fm => { fm[key] = value; });
+			await this.app.fileManager.processFrontMatter(tfile, (fm: Record<string, unknown>) => { fm[key] = value; });
 			this.rec.fields[key] = value;
 			new Notice(`Updated ${key}: ${value}`);
 			if (this.onSaved) await this.onSaved();

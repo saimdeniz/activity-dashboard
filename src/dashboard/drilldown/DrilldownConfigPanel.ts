@@ -24,6 +24,8 @@ export class DrilldownConfigPanel {
 		if (dc.cardSize < 50) dc.cardSize = 200;
 
 		const heading = panel.createDiv('dash-config-panel-heading');
+		const headingIcon = heading.createSpan('dash-config-heading-icon');
+		setIcon(headingIcon, 'sliders-horizontal');
 		heading.createSpan({ text: 'Configure View' });
 
 		// Layout
@@ -43,9 +45,9 @@ export class DrilldownConfigPanel {
 				layoutGroup.querySelectorAll('.dash-config-pill').forEach(b => b.removeClass('active'));
 				btn.addClass('active');
 				
-				imgSection.style.setProperty('display', l === 'cards' ? '' : 'none');
+				imgSection.toggleClass('dash-hidden', l !== 'cards');
 				const cssSec = panel.querySelector('.dash-card-size-section') as HTMLElement;
-				if (cssSec) cssSec.style.setProperty('display', l === 'cards' ? '' : 'none');
+				if (cssSec) cssSec.toggleClass('dash-hidden', l !== 'cards');
 				await onSaveQuiet();
 				onChange();
 			};
@@ -53,7 +55,7 @@ export class DrilldownConfigPanel {
 
 		// Card Size (only for cards)
 		const cardSizeSection = panel.createDiv('dash-config-section dash-card-size-section');
-		cardSizeSection.style.setProperty('display', dc.layout === 'cards' ? '' : 'none');
+		cardSizeSection.toggleClass('dash-hidden', dc.layout !== 'cards');
 		cardSizeSection.createDiv({ text: 'Card Size', cls: 'dash-config-label' });
 		new SliderComponent(cardSizeSection)
 			.setLimits(50, 800, 10)
@@ -68,7 +70,7 @@ export class DrilldownConfigPanel {
 
 		// Image section (cards only)
 		const imgSection = panel.createDiv('dash-config-section');
-		imgSection.style.setProperty('display', dc.layout === 'cards' ? '' : 'none');
+		imgSection.toggleClass('dash-hidden', dc.layout !== 'cards');
 
 		imgSection.createDiv({ text: 'Image Property', cls: 'dash-config-label' });
 
@@ -93,8 +95,8 @@ export class DrilldownConfigPanel {
 				item.addClass('active');
 				imgDropList.addClass('hidden');
 				imgDropBtn.removeClass('open');
-				imageFitSection.style.setProperty('display', dc.imageField ? '' : 'none');
-				aspectSection.style.setProperty('display', dc.imageField ? '' : 'none');
+				imageFitSection.toggleClass('dash-hidden', !dc.imageField);
+				aspectSection.toggleClass('dash-hidden', !dc.imageField);
 				await onSaveQuiet();
 				onChange();
 			};
@@ -115,7 +117,7 @@ export class DrilldownConfigPanel {
 
 		// Image Fit
 		const imageFitSection = imgSection.createDiv('dash-config-section');
-		imageFitSection.style.setProperty('display', dc.imageField ? '' : 'none');
+		imageFitSection.toggleClass('dash-hidden', !dc.imageField);
 		imageFitSection.createDiv({ text: 'Image Fit', cls: 'dash-config-label' });
 		const fitGroup = imageFitSection.createDiv('dash-config-pill-group');
 		(['cover', 'contain'] as const).forEach(fit => {
@@ -134,7 +136,7 @@ export class DrilldownConfigPanel {
 
 		// Image Aspect Ratio
 		const aspectSection = imgSection.createDiv('dash-config-section');
-		aspectSection.style.setProperty('display', dc.imageField ? '' : 'none');
+		aspectSection.toggleClass('dash-hidden', !dc.imageField);
 		aspectSection.createDiv({ text: 'Image Aspect Ratio', cls: 'dash-config-label' });
 		new SliderComponent(aspectSection)
 			.setLimits(0.25, 2.50, 0.05)
@@ -157,7 +159,10 @@ export class DrilldownConfigPanel {
 			cb.checked = dc.fields.includes(f.key);
 			row.createSpan({ text: f.key, cls: 'dash-config-field-label' });
 			row.createSpan({ text: f.type, cls: 'dash-config-field-type' });
-			cb.onchange = async () => {
+			row.onclick = async (e) => {
+				if (e.target !== cb) {
+					cb.checked = !cb.checked;
+				}
 				if (cb.checked) {
 					if (!dc.fields.includes(f.key)) dc.fields.push(f.key);
 				} else {
@@ -172,8 +177,7 @@ export class DrilldownConfigPanel {
 		const ndSection = panel.createDiv('dash-config-section');
 		ndSection.createDiv({ text: 'Note Detail Panel', cls: 'dash-config-label' });
 		const custBtn = ndSection.createEl('button', {
-			cls: 'dash-config-pill',
-			attr: { style: 'width: 100%; justify-content: center; gap: 6px; margin-top: 4px;' }
+			cls: 'dash-config-customize-btn',
 		});
 		const custIcon = custBtn.createSpan({ cls: 'dash-config-pill-icon' });
 		setIcon(custIcon, 'sliders-horizontal');
@@ -186,3 +190,4 @@ export class DrilldownConfigPanel {
 		};
 	}
 }
+

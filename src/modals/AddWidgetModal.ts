@@ -1,5 +1,5 @@
 import { Modal, App, Notice, setIcon } from 'obsidian';
-import type { CollectionConfig, WidgetConfig, WidgetType, ChartType, AggregationType, WidgetSize } from '../types';
+import type { CollectionConfig, WidgetConfig, WidgetType, ChartType, AggregationType } from '../types';
 import { migrateSize } from '../types';
 import { getAdaptiveForeground, hexToRgbString, getContrastTextColor } from '../utils/ColorUtils';
 
@@ -27,10 +27,12 @@ export class AddWidgetModal extends Modal {
 		const colRgb = hexToRgbString(colFg);
 		const contrastText = getContrastTextColor(colFg);
 
-		this.modalEl.style.setProperty('--collection-color', this.collection.color || '#818cf8');
-		this.modalEl.style.setProperty('--col-fg', colFg);
-		this.modalEl.style.setProperty('--col-rgb', colRgb);
-		this.modalEl.style.setProperty('--col-contrast', contrastText);
+		this.modalEl.setCssProps({
+			'--collection-color': this.collection.color || '#818cf8',
+			'--col-fg': colFg,
+			'--col-rgb': colRgb,
+			'--col-contrast': contrastText,
+		});
 
 		const { contentEl } = this;
 		contentEl.empty();
@@ -42,8 +44,10 @@ export class AddWidgetModal extends Modal {
 		const headerWrap = contentEl.createDiv('dash-modal-header-wrap');
 		const titleRow = headerWrap.createDiv({ cls: 'dash-modal-title-row' });
 		const dot = titleRow.createDiv({ cls: 'dash-modal-color-dot' });
-		dot.style.setProperty('background-color', colFg);
-		dot.style.setProperty('box-shadow', `0 0 10px ${colFg}`);
+		dot.setCssStyles({
+			backgroundColor: colFg,
+			boxShadow: `0 0 10px ${colFg}`,
+		});
 		titleRow.createDiv({ text: e ? 'Edit Widget' : 'Add Widget', cls: 'dash-modal-title' });
 		
 		headerWrap.createDiv({
@@ -204,7 +208,7 @@ export class AddWidgetModal extends Modal {
 		];
 		
 		const formulaWrap = contentEl.createDiv('dash-modal-inputs-row');
-		formulaWrap.style.setProperty('display', aggregation === 'formula' ? 'flex' : 'none');
+		formulaWrap.toggleClass('dash-hidden', aggregation !== 'formula');
 		const fMathWrap = formulaWrap.createDiv('dash-modal-input-group dash-modal-input-group--wide');
 		fMathWrap.createDiv({ text: 'Math Expression (e.g. episode * duration / 60)', cls: 'dash-modal-input-label' });
 		const mathExpressionInput = fMathWrap.createEl('input', {
@@ -247,7 +251,7 @@ export class AddWidgetModal extends Modal {
 				aggGroup.querySelectorAll('.dash-modal-pill').forEach(b => b.removeClass('active'));
 				btn.addClass('active');
 				aggregation = val;
-				formulaWrap.style.setProperty('display', aggregation === 'formula' ? 'flex' : 'none');
+				formulaWrap.toggleClass('dash-hidden', aggregation !== 'formula');
 			};
 		});
 
@@ -396,16 +400,16 @@ export class AddWidgetModal extends Modal {
 		const refreshConditional = () => {
 			renderFieldList();
 			const isChartType = widgetType === 'distribution' || widgetType === 'boolean' || widgetType === 'activity' || widgetType === 'ranking';
-			chartWrap.style.setProperty('display', isChartType ? '' : 'none');
-			aggWrap.style.setProperty('display', (widgetType === 'number-card' || widgetType === 'ranking') ? '' : 'none');
-			heatmapWrap.style.setProperty('display', widgetType === 'heatmap' ? '' : 'none');
-			legendWrap.style.setProperty('display', isChartType ? '' : 'none');
-			preFilterWrap.style.setProperty('display', (widgetType === 'activity' || widgetType === 'heatmap') ? 'none' : '');
-			booleanLabelsWrap.style.setProperty('display', widgetType === 'boolean' ? '' : 'none');
+			chartWrap.toggleClass('dash-hidden', !isChartType);
+			aggWrap.toggleClass('dash-hidden', widgetType !== 'number-card' && widgetType !== 'ranking');
+			heatmapWrap.toggleClass('dash-hidden', widgetType !== 'heatmap');
+			legendWrap.toggleClass('dash-hidden', !isChartType);
+			preFilterWrap.toggleClass('dash-hidden', widgetType === 'activity' || widgetType === 'heatmap');
+			booleanLabelsWrap.toggleClass('dash-hidden', widgetType !== 'boolean');
 			const showTopN = widgetType === 'distribution' || widgetType === 'ranking';
-			lWrap.style.setProperty('display', showTopN ? '' : 'none');
+			lWrap.toggleClass('dash-hidden', !showTopN);
 			tWrap.toggleClass('dash-modal-inputs-grid-wide', !showTopN);
-			iconPickerWrap.style.setProperty('display', widgetType === 'number-card' ? '' : 'none');
+			iconPickerWrap.toggleClass('dash-hidden', widgetType !== 'number-card');
 		};
 
 		refreshConditional();

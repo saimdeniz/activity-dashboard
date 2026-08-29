@@ -295,12 +295,13 @@
 }
 
 /* ── Custom Theme Dropdown in Settings ──────────────────────── */
-.dash-custom-dropdown {
+.dash-settings-tab .dash-custom-dropdown {
   position: relative;
   display: inline-block;
+  width: auto;
 }
 
-.dash-custom-dropdown-btn {
+.dash-settings-tab .dash-custom-dropdown-btn {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -314,39 +315,40 @@
   color: var(--text-normal);
   cursor: pointer;
   min-width: 130px;
+  width: auto;
   user-select: none;
   transition: all 0.15s ease;
   box-sizing: border-box;
 }
 
-.dash-custom-dropdown-btn:hover {
+.dash-settings-tab .dash-custom-dropdown-btn:hover {
   background: var(--background-modifier-hover);
   border-color: var(--interactive-accent);
 }
 
-.dash-custom-dropdown-btn.open {
+.dash-settings-tab .dash-custom-dropdown-btn.open {
   border-color: var(--interactive-accent);
   box-shadow: 0 0 0 2px rgba(var(--interactive-accent-rgb, 129, 140, 248), 0.25);
 }
 
-.dash-custom-dropdown-arrow {
+.dash-settings-tab .dash-custom-dropdown-arrow {
   display: flex;
   align-items: center;
   color: var(--text-muted);
   transition: transform 0.2s ease;
 }
 
-.dash-custom-dropdown-arrow svg,
-.dash-custom-dropdown-arrow .svg-icon {
-  width: 14px !important;
-  height: 14px !important;
+.dash-settings-tab .dash-custom-dropdown-arrow svg,
+.dash-settings-tab .dash-custom-dropdown-arrow .svg-icon {
+  width: 14px;
+  height: 14px;
 }
 
-.dash-custom-dropdown-btn.open .dash-custom-dropdown-arrow {
+.dash-settings-tab .dash-custom-dropdown-btn.open .dash-custom-dropdown-arrow {
   transform: rotate(180deg);
 }
 
-.dash-custom-dropdown-list {
+.dash-settings-tab .dash-custom-dropdown-list {
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
@@ -366,11 +368,11 @@
   box-sizing: border-box;
 }
 
-.dash-custom-dropdown-list.hidden {
-  display: none !important;
+.dash-settings-tab .dash-custom-dropdown-list.hidden {
+  display: none;
 }
 
-.dash-custom-dropdown-item {
+.dash-settings-tab .dash-custom-dropdown-item {
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 0.84rem;
@@ -381,12 +383,12 @@
   user-select: none;
 }
 
-.dash-custom-dropdown-item:hover {
+.dash-settings-tab .dash-custom-dropdown-item:hover {
   background: var(--background-modifier-hover);
   color: var(--text-normal);
 }
 
-.dash-custom-dropdown-item.active {
+.dash-settings-tab .dash-custom-dropdown-item.active {
   background: var(--interactive-accent);
   color: var(--text-on-accent, #fff);
   font-weight: 600;

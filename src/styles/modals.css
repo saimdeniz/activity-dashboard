@@ -1,32 +1,32 @@
-﻿/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    Modern Add/Edit Widget Modals & Dialogs
    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 .modal.dash-modal-dialog {
-  width: 580px !important;
-  max-width: 95vw !important;
-  border-radius: 14px !important;
-  border: 1px solid rgba(var(--col-rgb, 129, 140, 248), 0.25) !important;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 24px rgba(var(--col-rgb, 129, 140, 248), 0.08) !important;
-  box-sizing: border-box !important;
-  overflow: hidden !important;
+  width: 580px;
+  max-width: 95vw;
+  border-radius: 14px;
+  border: 1px solid rgba(var(--col-rgb, 129, 140, 248), 0.25);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 24px rgba(var(--col-rgb, 129, 140, 248), 0.08);
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .modal.dash-modal-dialog .modal-content {
-  padding: 14px 20px 20px !important;
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
+  padding: 14px 20px 20px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .dash-modern-modal {
-  padding: 0 !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
-  overflow-x: hidden !important;
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .dash-modal-header-wrap {
@@ -143,10 +143,10 @@
 
 .dash-modal-type-icon svg,
 .dash-modal-type-icon .svg-icon {
-  width: 18px !important;
-  height: 18px !important;
-  stroke: currentColor !important;
-  display: block !important;
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  display: block;
 }
 
 .dash-modal-type-card.active .dash-modal-type-icon {
@@ -212,11 +212,11 @@
 
 .dash-field-chevron svg,
 .dash-field-chevron .svg-icon {
-  width: 14px !important;
-  height: 14px !important;
+  width: 14px;
+  height: 14px;
   color: var(--text-muted);
   transition: transform 0.2s ease;
-  display: block !important;
+  display: block;
 }
 
 .dash-field-dropdown-open .dash-field-chevron svg,
@@ -238,7 +238,13 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  box-sizing: border-box;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.dash-field-dropdown.dash-hidden,
+.dash-field-dropdown.hidden {
+  display: none;
 }
 
 .dash-field-search {
@@ -347,7 +353,7 @@
 }
 
 .dash-modal-inputs-grid-wide {
-  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .dash-modal-inputs-row {
@@ -482,10 +488,10 @@
 
 .dash-icon-picker-btn svg,
 .dash-icon-picker-btn .svg-icon {
-  width: 16px !important;
-  height: 16px !important;
-  stroke: currentColor !important;
-  display: block !important;
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  display: block;
 }
 
 .dash-icon-picker-custom-row {
@@ -531,10 +537,10 @@
 }
 
 .dash-modal-save.mod-cta {
-  background: var(--col-fg, var(--interactive-accent)) !important;
-  color: var(--col-contrast, #fff) !important;
-  border: none !important;
-  box-shadow: 0 4px 14px rgba(var(--col-rgb, 129, 140, 248), 0.35) !important;
+  background: var(--col-fg, var(--interactive-accent));
+  color: var(--col-contrast, #fff);
+  border: none;
+  box-shadow: 0 4px 14px rgba(var(--col-rgb, 129, 140, 248), 0.35);
   transition: all 0.15s ease;
 }
 
@@ -550,8 +556,8 @@
 
 /* â”€â”€ In-Glance Quick Note / Frontmatter Editor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .modal.dash-note-edit-dialog {
-  width: 620px !important;
-  max-width: 95vw !important;
+  width: 620px;
+  max-width: 95vw;
 }
 
 .dash-note-edit-header {
@@ -598,8 +604,8 @@
 
 .dash-note-edit-cover-placeholder svg,
 .dash-note-edit-cover-placeholder .svg-icon {
-  width: 24px !important;
-  height: 24px !important;
+  width: 24px;
+  height: 24px;
 }
 
 .dash-note-edit-header-text {
@@ -628,9 +634,9 @@
 
 .dash-note-edit-badge-icon svg,
 .dash-note-edit-badge-icon .svg-icon {
-  width: 12px !important;
-  height: 12px !important;
-  stroke: currentColor !important;
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
 }
 
 .dash-note-edit-title-row {
@@ -681,8 +687,8 @@
 
 .dash-note-open-btn-icon svg,
 .dash-note-open-btn-icon .svg-icon {
-  width: 13px !important;
-  height: 13px !important;
+  width: 13px;
+  height: 13px;
 }
 
 .dash-note-edit-body {
@@ -725,9 +731,9 @@
 
 .dash-note-sec-icon svg,
 .dash-note-sec-icon .svg-icon {
-  width: 13px !important;
-  height: 13px !important;
-  stroke: currentColor !important;
+  width: 13px;
+  height: 13px;
+  stroke: currentColor;
 }
 
 .dash-note-prop-row {
@@ -785,8 +791,8 @@
 
 .dash-note-type-btn svg,
 .dash-note-type-btn .svg-icon {
-  width: 14px !important;
-  height: 14px !important;
+  width: 14px;
+  height: 14px;
 }
 
 .dash-note-type-menu-icon {
@@ -798,8 +804,8 @@
 
 .dash-note-type-menu-icon svg,
 .dash-note-type-menu-icon .svg-icon {
-  width: 14px !important;
-  height: 14px !important;
+  width: 14px;
+  height: 14px;
 }
 
 .dash-note-prop-label {
@@ -856,15 +862,15 @@
 }
 
 .dash-note-prop-del-btn:hover {
-  opacity: 1 !important;
+  opacity: 1;
   color: var(--text-error, #ef4444);
   background: rgba(239, 68, 68, 0.15);
 }
 
 .dash-note-prop-del-btn svg,
 .dash-note-prop-del-btn .svg-icon {
-  width: 13px !important;
-  height: 13px !important;
+  width: 13px;
+  height: 13px;
 }
 
 /* List / Tag Pills */
@@ -919,18 +925,18 @@
 }
 
 .dash-note-list-add-input {
-  border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  padding: 2px 4px !important;
-  font-size: 0.80rem !important;
-  color: var(--text-normal) !important;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: 2px 4px;
+  font-size: 0.80rem;
+  color: var(--text-normal);
   flex: 1;
   min-width: 90px;
 }
 
 .dash-note-list-add-input:focus {
-  outline: none !important;
+  outline: none;
 }
 
 /* Checkbox Toggle */
@@ -994,8 +1000,8 @@
 
 .dash-note-date-clear-btn svg,
 .dash-note-date-clear-btn .svg-icon {
-  width: 12px !important;
-  height: 12px !important;
+  width: 12px;
+  height: 12px;
 }
 
 /* Rating */
@@ -1029,9 +1035,9 @@
 }
 
 .dash-note-rating-num-input {
-  width: 54px !important;
-  padding: 3px 6px !important;
-  font-size: 0.80rem !important;
+  width: 54px;
+  padding: 3px 6px;
+  font-size: 0.80rem;
   text-align: center;
 }
 
@@ -1065,8 +1071,8 @@
 
 .dash-note-add-prop-icon svg,
 .dash-note-add-prop-icon .svg-icon {
-  width: 12px !important;
-  height: 12px !important;
+  width: 12px;
+  height: 12px;
 }
 
 /* Row Actions (Pin & Delete) */
@@ -1095,20 +1101,20 @@
 }
 
 .dash-note-pin-btn:hover {
-  opacity: 1 !important;
+  opacity: 1;
   color: var(--col-fg, #eab308);
   background: var(--background-modifier-hover);
 }
 
 .dash-note-pin-btn.pinned {
-  opacity: 1 !important;
+  opacity: 1;
   color: #eab308;
 }
 
 .dash-note-pin-btn svg,
 .dash-note-pin-btn .svg-icon {
-  width: 13px !important;
-  height: 13px !important;
+  width: 13px;
+  height: 13px;
 }
 
 
@@ -1119,31 +1125,31 @@
 
 /* ── Modal shell ─────────────────────────────────────────────── */
 .modal.dash-note-detail-dialog {
-  width: min(760px, calc(100vw - 32px)) !important;
-  height: min(600px, calc(100vh - 64px)) !important;
-  max-height: calc(100vh - 64px) !important;
-  padding: 0 !important;
-  border-radius: 14px !important;
-  overflow: hidden !important;
-  display: flex !important;
-  flex-direction: column !important;
-  box-sizing: border-box !important;
+  width: min(760px, calc(100vw - 32px));
+  height: min(600px, calc(100vh - 64px));
+  max-height: calc(100vh - 64px);
+  padding: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
   background: radial-gradient(ellipse at 85% 0%, rgba(var(--col-rgb, 129,140,248), 0.18) 0%, transparent 60%),
               radial-gradient(ellipse at 15% 100%, rgba(var(--col-rgb, 129,140,248), 0.12) 0%, transparent 55%),
-              var(--background-primary) !important;
-  border: 1px solid rgba(var(--col-rgb, 129,140,248), 0.35) !important;
-  box-shadow: 0 24px 60px rgba(0,0,0,0.65), 0 0 30px rgba(var(--col-rgb, 129,140,248), 0.18) !important;
+              var(--background-primary);
+  border: 1px solid rgba(var(--col-rgb, 129,140,248), 0.35);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.65), 0 0 30px rgba(var(--col-rgb, 129,140,248), 0.18);
 }
 
 /* Obsidian wraps content in .modal-content – neutralise it */
 .modal.dash-note-detail-dialog .modal-content {
-  padding: 0 !important;
-  margin: 0 !important;
-  height: 100% !important;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-  box-sizing: border-box !important;
+  padding: 0;
+  margin: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .dash-note-detail-modal {
@@ -1172,10 +1178,10 @@
 }
 
 .ndm-title {
-  font-size: 1.15rem !important;
-  font-weight: 800 !important;
-  color: var(--text-normal) !important;
-  margin: 0 0 5px 0 !important;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-normal);
+  margin: 0 0 5px 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1204,14 +1210,14 @@
 
 .ndm-badge svg,
 .ndm-badge .svg-icon {
-  width: 11px !important;
-  height: 11px !important;
+  width: 11px;
+  height: 11px;
 }
 
 .ndm-badge-gold {
-  color: #eab308 !important;
-  border-color: rgba(234,179,8,0.45) !important;
-  background: rgba(234,179,8,0.12) !important;
+  color: #eab308;
+  border-color: rgba(234,179,8,0.45);
+  background: rgba(234,179,8,0.12);
 }
 
 /* Action buttons */
@@ -1265,8 +1271,8 @@
 
 .ndm-btn-icon svg,
 .ndm-btn-icon .svg-icon {
-  width: 12px !important;
-  height: 12px !important;
+  width: 12px;
+  height: 12px;
 }
 
 /* ── Scrollable body ─────────────────────────────────────────── */
@@ -1324,8 +1330,8 @@
 
 .ndm-cover-placeholder svg,
 .ndm-cover-placeholder .svg-icon {
-  width: 36px !important;
-  height: 36px !important;
+  width: 36px;
+  height: 36px;
 }
 
 .ndm-hero-info {
@@ -1461,8 +1467,8 @@
 
 .ndm-cat-icon svg,
 .ndm-cat-icon .svg-icon {
-  width: 11px !important;
-  height: 11px !important;
+  width: 11px;
+  height: 11px;
 }
 
 .ndm-cat-pills {
@@ -1552,7 +1558,7 @@
 }
 
 .ndm-link {
-  color: var(--col-fg, var(--interactive-accent)) !important;
+  color: var(--col-fg, var(--interactive-accent));
   word-break: break-all;
   font-size: 0.73rem;
 }
@@ -1561,29 +1567,29 @@
    Note Detail Customize Modal (NDM-CUST)
    ═══════════════════════════════════════════════════════════════ */
 .modal.dash-note-customize-dialog {
-  width: min(580px, calc(100vw - 32px)) !important;
-  max-height: 85vh !important;
-  padding: 0 !important;
-  border-radius: 14px !important;
-  overflow: hidden !important;
-  display: flex !important;
-  flex-direction: column !important;
-  box-sizing: border-box !important;
+  width: min(580px, calc(100vw - 32px));
+  max-height: 85vh;
+  padding: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
   background: radial-gradient(ellipse at 90% 0%, rgba(var(--col-rgb, 129,140,248), 0.18) 0%, transparent 60%),
               radial-gradient(ellipse at 10% 100%, rgba(var(--col-rgb, 129,140,248), 0.12) 0%, transparent 50%),
-              var(--background-primary) !important;
-  border: 1px solid rgba(var(--col-rgb, 129,140,248), 0.35) !important;
-  box-shadow: 0 24px 60px rgba(0,0,0,0.7), 0 0 30px rgba(var(--col-rgb, 129,140,248), 0.2) !important;
+              var(--background-primary);
+  border: 1px solid rgba(var(--col-rgb, 129,140,248), 0.35);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.7), 0 0 30px rgba(var(--col-rgb, 129,140,248), 0.2);
 }
 
 .modal.dash-note-customize-dialog .modal-content {
-  padding: 0 !important;
-  margin: 0 !important;
-  height: 100% !important;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-  box-sizing: border-box !important;
+  padding: 0;
+  margin: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .dash-note-customize-modal {
@@ -1610,15 +1616,15 @@
 
 .ndm-cust-icon svg,
 .ndm-cust-icon .svg-icon {
-  width: 18px !important;
-  height: 18px !important;
+  width: 18px;
+  height: 18px;
   color: var(--col-fg, var(--interactive-accent));
 }
 
 .ndm-cust-title {
-  font-size: 1.10rem !important;
-  font-weight: 800 !important;
-  margin: 0 !important;
+  font-size: 1.10rem;
+  font-weight: 800;
+  margin: 0;
   color: var(--text-normal);
 }
 
@@ -1663,8 +1669,8 @@
 
 .ndm-cust-sec-icon svg,
 .ndm-cust-sec-icon .svg-icon {
-  width: 13px !important;
-  height: 13px !important;
+  width: 13px;
+  height: 13px;
 }
 
 .ndm-cust-sec-desc {
@@ -1780,8 +1786,8 @@
 
 .ndm-cust-chip-check svg,
 .ndm-cust-chip-check .svg-icon {
-  width: 12px !important;
-  height: 12px !important;
+  width: 12px;
+  height: 12px;
   color: var(--col-fg, var(--interactive-accent));
   flex-shrink: 0;
 }

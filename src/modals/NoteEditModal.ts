@@ -109,7 +109,7 @@ export class NoteEditModal extends Modal {
 	}
 
 	onOpen(): void {
-		this.containerEl.style.setProperty('z-index', '3500', 'important');
+		this.containerEl.setCssStyles({ zIndex: '3500' });
 		this.modalEl.addClass('dash-modal-dialog', 'dash-note-edit-dialog');
 		const { contentEl } = this;
 		contentEl.empty();
@@ -121,10 +121,12 @@ export class NoteEditModal extends Modal {
 		const colRgb = hexToRgbString(colFg);
 		const colContrast = getContrastTextColor(colFg);
 
-		this.modalEl.style.setProperty('--collection-color', baseColor);
-		this.modalEl.style.setProperty('--col-fg', colFg);
-		this.modalEl.style.setProperty('--col-rgb', colRgb);
-		this.modalEl.style.setProperty('--col-contrast', colContrast);
+		this.modalEl.setCssProps({
+			'--collection-color': baseColor,
+			'--col-fg': colFg,
+			'--col-rgb': colRgb,
+			'--col-contrast': colContrast,
+		});
 
 		// ── Header ──────────────────────────────────────────────
 		const headerWrap = contentEl.createDiv('dash-note-edit-header');
@@ -332,9 +334,11 @@ export class NoteEditModal extends Modal {
 	private showTypePickerMenu(anchorEl: HTMLElement, prop: PropertyFieldItem, body: HTMLElement): void {
 		const menu = activeDocument.body.createDiv('dash-custom-dropdown-list dash-note-type-menu');
 		const rect = anchorEl.getBoundingClientRect();
-		menu.style.top = `${rect.bottom + 4}px`;
-		menu.style.left = `${rect.left}px`;
-		menu.style.zIndex = '4000';
+		menu.setCssStyles({
+			top: `${rect.bottom + 4}px`,
+			left: `${rect.left}px`,
+			zIndex: '4000',
+		});
 
 		const types: [PropertyType, string, string][] = [
 			['text', 'Text', 'align-left'],
@@ -365,7 +369,7 @@ export class NoteEditModal extends Modal {
 				activeDocument.removeEventListener('click', closeMenu);
 			}
 		};
-		setTimeout(() => activeDocument.addEventListener('click', closeMenu), 0);
+		window.setTimeout(() => activeDocument.addEventListener('click', closeMenu), 0);
 	}
 
 	private renderFieldControl(container: HTMLElement, prop: PropertyFieldItem): void {
@@ -395,7 +399,7 @@ export class NoteEditModal extends Modal {
 	}
 
 	private renderListPillControl(container: HTMLElement, prop: PropertyFieldItem): void {
-		const items: string[] = Array.isArray(prop.value) ? [...prop.value] : [];
+		const items: string[] = Array.isArray(prop.value) ? prop.value.map(String) : [];
 		const wrap = container.createDiv('dash-note-list-wrap');
 		const pillsWrap = wrap.createDiv('dash-note-pills-wrap');
 
@@ -418,18 +422,19 @@ export class NoteEditModal extends Modal {
 			});
 
 			const addInput = pillsWrap.createEl('input', {
-				type: 'text',
-				cls: 'dash-note-list-add-input',
-				attr: { placeholder: items.length === 0 ? '+ Add item (press Enter)...' : '+ add...' }
+				cls: 'dash-note-pill-input',
+				attr: { placeholder: '+ Add item…' },
 			});
 
 			const commitItem = () => {
 				const val = addInput.value.trim();
 				if (val) {
-					const parts = val.split(/[,|]/).map(s => s.trim()).filter(Boolean);
-					parts.forEach(p => {
-						if (!items.includes(p)) items.push(p);
-					});
+					if (val.includes(',') || val.includes('|')) {
+						const parts = val.split(/[,|]/).map(s => s.trim()).filter(Boolean);
+						items.push(...parts);
+					} else {
+						items.push(val);
+					}
 					updateValue();
 					renderPills();
 				}
@@ -439,10 +444,6 @@ export class NoteEditModal extends Modal {
 				if (e.key === 'Enter' || e.key === ',') {
 					e.preventDefault();
 					commitItem();
-				} else if (e.key === 'Backspace' && !addInput.value && items.length > 0) {
-					items.pop();
-					updateValue();
-					renderPills();
 				}
 			};
 
@@ -460,7 +461,7 @@ export class NoteEditModal extends Modal {
 			cls: `dash-note-toggle-btn ${boolVal ? 'active' : ''}`,
 			attr: { title: 'Toggle boolean status' }
 		});
-		const dot = toggle.createSpan('dash-note-toggle-dot');
+		toggle.createSpan('dash-note-toggle-dot');
 		toggle.createSpan({ text: boolVal ? 'True' : 'False', cls: 'dash-note-toggle-text' });
 
 		toggle.onclick = () => {
@@ -563,7 +564,7 @@ export class NoteEditModal extends Modal {
 		}
 
 		try {
-			await this.app.fileManager.processFrontMatter(tfile, (fm) => {
+			await this.app.fileManager.processFrontMatter(tfile, (fm: Record<string, unknown>) => {
 				const currentKeysInModal = new Set(this.properties.map(p => p.key));
 
 				// Remove properties that were deleted in the modal

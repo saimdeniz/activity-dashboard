@@ -126,6 +126,6 @@ export function renderDistributionWidget(params: {
 				}
 			},
 			scales: buildScalesConfig(chartType, text, gridColor, isHBar),
-		},
+		} as import('chart.js').ChartOptions,
 	}));
 }

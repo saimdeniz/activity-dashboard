@@ -1,22 +1,24 @@
-﻿import type { ChartType } from '../types';
+import type { TooltipItem, ChartType as ChartJsType } from 'chart.js';
+import type { ChartType } from '../types';
 
 /**
  * Standard tooltip label formatter for Chart.js across all widgets.
  * Displays value and automatically calculates percentage for pie/doughnut charts.
  */
 export function buildTooltipLabelCallback() {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	return (context: any): string => {
+	return (context: TooltipItem<ChartJsType>): string => {
 		let label = context.dataset?.label || '';
 		if (label) {
 			label += ': ';
 		}
-		const val = Number(context.raw ?? 0);
-		label += isNaN(val) ? String(context.raw ?? '') : val;
-		const chartType = context.chart?.config?.type;
+		const rawVal = context.raw;
+		const val = Number(rawVal ?? 0);
+		label += isNaN(val) ? String(rawVal ?? '') : String(val);
+		const chart = context.chart;
+		const chartType = (chart?.config as { type?: string } | undefined)?.type;
 		if (chartType === 'pie' || chartType === 'doughnut') {
-			const dataArr = (context.chart?.data?.datasets?.[0]?.data || []) as number[];
-			const total = dataArr.reduce((a, b) => a + (Number(b) || 0), 0);
+			const dataArr = (chart.data?.datasets?.[0]?.data || []) as (number | null | undefined)[];
+			const total = dataArr.reduce<number>((a, b) => a + (Number(b) || 0), 0);
 			if (total > 0 && !isNaN(val)) {
 				const pct = ((val / total) * 100).toFixed(1);
 				label += ` (${pct}%)`;
@@ -29,7 +31,7 @@ export function buildTooltipLabelCallback() {
 /**
  * Standard scales configuration for Bar, Line, and Radar charts.
  */
-export function buildScalesConfig(chartType: ChartType | string, textColor: string, gridColor: string, isHBar = false) {
+export function buildScalesConfig(chartType: ChartType | 'bar', textColor: string, gridColor: string, isHBar = false) {
 	const isBar = chartType === 'bar' || chartType === 'bar-horizontal' || chartType === 'bar-vertical';
 	const isVBar = chartType === 'bar' || chartType === 'bar-vertical';
 
@@ -71,3 +73,4 @@ export function formatValue(n: number, decimals = 1): string {
 	if (Number.isInteger(n)) return String(n);
 	return parseFloat(n.toFixed(decimals)).toString();
 }
+

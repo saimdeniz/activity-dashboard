@@ -10,10 +10,12 @@ function applyOverviewModalTheme(modalEl: HTMLElement) {
 	const colRgb = hexToRgbString(colFg);
 	const colContrast = getContrastTextColor(colFg);
 
-	modalEl.style.setProperty('--collection-color', baseColor);
-	modalEl.style.setProperty('--col-fg', colFg);
-	modalEl.style.setProperty('--col-rgb', colRgb);
-	modalEl.style.setProperty('--col-contrast', colContrast);
+	modalEl.setCssProps({
+		'--collection-color': baseColor,
+		'--col-fg': colFg,
+		'--col-rgb': colRgb,
+		'--col-contrast': colContrast,
+	});
 	return { colFg };
 }
 
@@ -37,7 +39,7 @@ export class AddOverviewWidgetModal extends Modal {
 		const header = contentEl.createDiv('dash-modal-header-wrap');
 		const titleRow = header.createDiv('dash-modal-title-row');
 		const dot = titleRow.createDiv('dash-modal-color-dot');
-		dot.style.background = colFg;
+		dot.setCssStyles({ backgroundColor: colFg });
 		titleRow.createDiv({ text: 'Add Global Overview Widget', cls: 'dash-modal-title' });
 		header.createDiv({ text: 'Choose a global aggregation widget to add to your overview dashboard.', cls: 'dash-modal-subtitle' });
 
@@ -116,7 +118,7 @@ export class BreakdownEditModal extends Modal {
 		const header = contentEl.createDiv('dash-modal-header-wrap');
 		const titleRow = header.createDiv('dash-modal-title-row');
 		const dot = titleRow.createDiv('dash-modal-color-dot');
-		dot.style.background = colFg;
+		dot.setCssStyles({ backgroundColor: colFg });
 		titleRow.createDiv({ text: 'Media Breakdown Settings', cls: 'dash-modal-title' });
 		header.createDiv({ text: 'Configure chart representation for total items breakdown.', cls: 'dash-modal-subtitle' });
 
@@ -172,7 +174,7 @@ export class TotalItemsEditModal extends Modal {
 		const header = contentEl.createDiv('dash-modal-header-wrap');
 		const titleRow = header.createDiv('dash-modal-title-row');
 		const dot = titleRow.createDiv('dash-modal-color-dot');
-		dot.style.background = colFg;
+		dot.setCssStyles({ backgroundColor: colFg });
 		titleRow.createDiv({ text: 'Total Items Settings', cls: 'dash-modal-title' });
 		header.createDiv({ text: 'Select an icon to display on the global Total Items card.', cls: 'dash-modal-subtitle' });
 
@@ -185,13 +187,15 @@ export class TotalItemsEditModal extends Modal {
 		let selectedIcon = this.cfg.icon ?? 'library';
 
 		defaultIcons.forEach(ic => {
-			const btn = iconGrid.createEl('button', { cls: `dash-icon-picker-btn ${selectedIcon === ic ? 'active' : ''}`, attr: { 'aria-label': ic } });
+			const btn = iconGrid.createEl('button', {
+				cls: `dash-icon-picker-item ${selectedIcon === ic ? 'active' : ''}`,
+				attr: { 'aria-label': ic },
+			});
 			setIcon(btn, ic);
 			btn.onclick = () => {
-				selectedIcon = ic;
-				iconGrid.querySelectorAll('.dash-icon-picker-btn').forEach(b => b.removeClass('active'));
+				iconGrid.querySelectorAll('.dash-icon-picker-item').forEach(b => b.removeClass('active'));
 				btn.addClass('active');
-				customIconInput.value = '';
+				selectedIcon = ic;
 			};
 		});
 
@@ -244,7 +248,7 @@ export class PinEditModal extends Modal {
 		const header = contentEl.createDiv('dash-modal-header-wrap');
 		const titleRow = header.createDiv('dash-modal-title-row');
 		const dot = titleRow.createDiv('dash-modal-color-dot');
-		dot.style.background = colFg;
+		dot.setCssStyles({ backgroundColor: colFg });
 		titleRow.createDiv({ text: 'Pinned Widget Display', cls: 'dash-modal-title' });
 		header.createDiv({ text: 'Resize pinned widget directly on the dashboard.', cls: 'dash-modal-subtitle' });
 

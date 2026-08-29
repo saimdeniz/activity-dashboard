@@ -29,7 +29,7 @@ export class GlanceDrilldown {
 	}): void {
 		this.close();
 
-		const { parentEl, col, config, initialFilter, records, globalYear, onSaveQuiet, onReloadRecords } = params;
+		const { col, config, initialFilter, records, globalYear, onSaveQuiet, onReloadRecords } = params;
 
 		let drilldownYear: number | 'all-time' = globalYear;
 
@@ -140,12 +140,6 @@ export class GlanceDrilldown {
 		titleLeft.createDiv({ text: config.title, cls: 'dash-glance-title' });
 
 		const titleRight = titleRow.createDiv('dash-glance-title-right');
-
-		// Year nav container for activity charts
-		let yearNavContainer: HTMLElement | null = null;
-		if (config.type === 'activity' && activityResolution !== 'yearly') {
-			yearNavContainer = titleRight.createDiv('dash-activity-year-nav');
-		}
 
 		// Fullscreen / expand button
 		const expandBtn = titleRight.createEl('button', { cls: 'dash-glance-action-btn', attr: { 'aria-label': 'Toggle Fullscreen' } });

@@ -52,7 +52,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 		COLLECTION_COLORS.forEach(c => {
 			const activeColor = this.plugin.settings.overviewColor || '#818cf8';
 			const swatch = overviewSwatchRow.createDiv({ cls: `dash-color-swatch ${activeColor === c ? 'active' : ''}` });
-			swatch.style.setProperty('background-color', c);
+			swatch.setCssStyles({ backgroundColor: c });
 			swatch.setAttribute('title', c);
 			swatch.onclick = async () => {
 				this.plugin.settings.overviewColor = c;
@@ -186,9 +186,12 @@ export class DashboardSettingTab extends PluginSettingTab {
 							const json = JSON.stringify(this.plugin.settings, null, 2);
 							const blob = new Blob([json], { type: 'application/json' });
 							const url = URL.createObjectURL(blob);
-							const a = activeDocument.createElement('a');
-							a.href = url;
-							a.download = `activity-dashboard-settings-${new Date().toISOString().slice(0, 10)}.json`;
+							const a = createEl('a', {
+								href: url,
+								attr: {
+									download: `activity-dashboard-settings-${new Date().toISOString().slice(0, 10)}.json`,
+								},
+							});
 							activeDocument.body.appendChild(a);
 							a.click();
 							activeDocument.body.removeChild(a);
@@ -224,9 +227,10 @@ export class DashboardSettingTab extends PluginSettingTab {
 				btn.setButtonText('Import Backup')
 					.setTooltip('Upload and restore settings from a JSON file')
 					.onClick(() => {
-						const fileInput = activeDocument.createElement('input');
-						fileInput.type = 'file';
-						fileInput.accept = '.json';
+						const fileInput = createEl('input', {
+							type: 'file',
+							attr: { accept: '.json' },
+						});
 						fileInput.onchange = async (e) => {
 							const file = (e.target as HTMLInputElement).files?.[0];
 							if (!file) return;
@@ -297,7 +301,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 
 	private renderCollectionItem(parent: HTMLElement, col: CollectionConfig): void {
 		const item = parent.createDiv('dash-settings-item');
-		item.style.setProperty('--col-color', col.color);
+		item.setCssProps({ '--col-color': col.color });
 		const isExpanded = this.expandedId === col.id;
 
 		// Header row
@@ -309,7 +313,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 		};
 
 		const colorBadge = header.createDiv('dash-settings-color-badge');
-		colorBadge.style.setProperty('background-color', col.color);
+		colorBadge.setCssStyles({ backgroundColor: col.color });
 		const colIconEl = colorBadge.createDiv('dash-settings-badge-icon');
 		setIcon(colIconEl, col.icon);
 
@@ -403,7 +407,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 		const swatchRow = editor.createDiv('dash-color-swatch-row');
 		COLLECTION_COLORS.forEach(c => {
 			const swatch = swatchRow.createDiv({ cls: `dash-color-swatch ${col.color === c ? 'active' : ''}` });
-			swatch.style.setProperty('background-color', c);
+			swatch.setCssStyles({ backgroundColor: c });
 			swatch.setAttribute('title', c);
 			swatch.onclick = async () => {
 				col.color = c;
@@ -412,8 +416,8 @@ export class DashboardSettingTab extends PluginSettingTab {
 				swatchRow.querySelectorAll('.dash-swatch-check').forEach(chk => chk.remove());
 				const check = swatch.createDiv('dash-swatch-check');
 				setIcon(check, 'check');
-				item.style.setProperty('--col-color', c);
-				colorBadge.style.setProperty('background-color', c);
+				item.setCssProps({ '--col-color': c });
+				colorBadge.setCssStyles({ backgroundColor: c });
 				await this.plugin.saveSettings();
 			};
 			// Checkmark for selected
@@ -431,8 +435,8 @@ export class DashboardSettingTab extends PluginSettingTab {
 				.onChange(async v => {
 					col.color = v;
 					swatchRow.querySelectorAll('.dash-color-swatch').forEach(s => s.removeClass('active'));
-					item.style.setProperty('--col-color', v);
-					colorBadge.style.setProperty('background-color', v);
+					item.setCssProps({ '--col-color': v });
+					colorBadge.setCssStyles({ backgroundColor: v });
 					await this.plugin.saveSettings();
 				})
 			);

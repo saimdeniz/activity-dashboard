@@ -2,7 +2,7 @@ import { ItemView, WorkspaceLeaf, setIcon, Menu, Notice } from 'obsidian';
 import { Chart as ChartJS, registerables, type Chart } from 'chart.js';
 import type {
 	CollectionConfig, DashboardSettings, OverviewItem,
-	RawRecord, WidgetConfig, WidgetSize,
+	RawRecord, WidgetConfig,
 } from '../types';
 import { migrateSize, sizeToClass } from '../types';
 import { CollectionReader } from '../core/CollectionReader';
@@ -127,7 +127,7 @@ export class DashboardView extends ItemView {
 		try {
 			const body = (typeof activeDocument !== 'undefined' && activeDocument.body) ? activeDocument.body : document.body;
 			return getComputedStyle(body).getPropertyValue(name).trim();
-		} catch (_) {
+		} catch {
 			return '';
 		}
 	}
@@ -140,7 +140,9 @@ export class DashboardView extends ItemView {
 			if (typeof document !== 'undefined' && document?.body?.classList) {
 				return !document.body.classList.contains('theme-light');
 			}
-		} catch (_) {}
+		} catch {
+			return true;
+		}
 		return true;
 	}
 
@@ -186,10 +188,12 @@ export class DashboardView extends ItemView {
 			const activeRgb = hexToRgbString(activeFg);
 			const activeContrast = getContrastTextColor(activeFg);
 
-			contentEl.style.setProperty('--col-color', activeColor);
-			contentEl.style.setProperty('--col-fg', activeFg);
-			contentEl.style.setProperty('--col-rgb', activeRgb);
-			contentEl.style.setProperty('--col-contrast', activeContrast);
+			contentEl.setCssProps({
+				'--col-color': activeColor,
+				'--col-fg': activeFg,
+				'--col-rgb': activeRgb,
+				'--col-contrast': activeContrast,
+			});
 
 			this.renderTopBar(contentEl);
 			this.renderPageHeader(contentEl);
@@ -239,8 +243,10 @@ export class DashboardView extends ItemView {
 		const activeRgb = hexToRgbString(activeFg);
 
 		const bar = el.createDiv('dash-topbar');
-		bar.style.setProperty('--active-theme-color', activeFg);
-		bar.style.setProperty('--active-theme-rgb', activeRgb);
+		bar.setCssProps({
+			'--active-theme-color': activeFg,
+			'--active-theme-rgb': activeRgb,
+		});
 
 		const switchWrap = bar.createDiv('dash-mode-switch');
 		(['library', 'year'] as const).forEach(mode => {
@@ -334,8 +340,10 @@ export class DashboardView extends ItemView {
 		const headerRgb = hexToRgbString(headerFg);
 
 		const header = el.createDiv('dash-page-header');
-		header.style.setProperty('--active-theme-color', headerFg);
-		header.style.setProperty('--active-theme-rgb', headerRgb);
+		header.setCssProps({
+			'--active-theme-color': headerFg,
+			'--active-theme-rgb': headerRgb,
+		});
 
 		const left = header.createDiv('dash-page-header-left');
 
@@ -377,19 +385,20 @@ export class DashboardView extends ItemView {
 		const tabTextCol = getContrastTextColor(tabColor);
 
 		const btn = bar.createEl('button', { cls: `dash-tab ${active ? 'active' : ''}` });
-		btn.style.setProperty('--tab-color', tabFg);
-		btn.style.setProperty('--tab-rgb', rgb);
-		btn.style.setProperty('--tab-text-color', tabTextCol);
-		if (active) {
-			btn.style.setProperty('--tab-active-bg', tabColor);
-		}
+		btn.setCssProps({
+			'--tab-color': tabFg,
+			'--tab-rgb': rgb,
+			'--tab-text-color': tabTextCol,
+			...(active ? { '--tab-active-bg': tabColor } : {}),
+		});
 
 		const iconEl = btn.createSpan('dash-tab-icon');
 		setIcon(iconEl, icon);
 		btn.createSpan({ text: label, cls: 'dash-tab-text' });
 
-		btn.onclick = () => {
+		btn.onclick = async () => {
 			this.activeTab = id;
+			await this.saveQuiet();
 			void this.render();
 		};
 	}
@@ -416,15 +425,19 @@ export class DashboardView extends ItemView {
 		const colFg = getAdaptiveForeground(overviewColor, isDarkTheme);
 		const colRgb = hexToRgbString(colFg);
 		const colContrast = getContrastTextColor(colFg);
-		toolbar.style.setProperty('--collection-color', overviewColor);
-		toolbar.style.setProperty('--col-fg', colFg);
-		toolbar.style.setProperty('--col-rgb', colRgb);
-		toolbar.style.setProperty('--col-contrast', colContrast);
+		toolbar.setCssProps({
+			'--collection-color': overviewColor,
+			'--col-fg': colFg,
+			'--col-rgb': colRgb,
+			'--col-contrast': colContrast,
+		});
 
 		const colLabel = toolbar.createDiv('dash-collection-label');
 		const colIcon = colLabel.createDiv('dash-col-icon');
-		colIcon.style.setProperty('background-color', colFg);
-		colIcon.style.setProperty('color', colContrast);
+		colIcon.setCssStyles({
+			backgroundColor: colFg,
+			color: colContrast,
+		});
 		setIcon(colIcon, 'home');
 		colLabel.createDiv({ text: 'Overview', cls: 'dash-col-name' });
 
@@ -506,13 +519,15 @@ export class DashboardView extends ItemView {
 		const colFg = getAdaptiveForeground(accentColor, isDarkTheme);
 		const colRgb = hexToRgbString(colFg);
 
-		const card = activeDocument.createElement('div');
-		card.className = `dash-widget ${sizeToClass(resolvedSize)} dash-widget-pinref`;
-		card.style.setProperty('--collection-color', accentColor);
-		card.style.setProperty('--col-fg', colFg);
-		card.style.setProperty('--col-rgb', colRgb);
-		card.dataset.widgetId = item.id;
-		grid.appendChild(card);
+		const card = grid.createDiv({
+			cls: `dash-widget ${sizeToClass(resolvedSize)} dash-widget-pinref`,
+			attr: { 'data-widget-id': item.id },
+		});
+		card.setCssProps({
+			'--collection-color': accentColor,
+			'--col-fg': colFg,
+			'--col-rgb': colRgb,
+		});
 
 		attachResizeHandles(card, grid, resolvedSize, async (newSize) => {
 			item.size = newSize;
@@ -529,7 +544,7 @@ export class DashboardView extends ItemView {
 
 		const titleEl = header.createDiv('dash-widget-title-wrap');
 		const dot = titleEl.createDiv('dash-widget-color-dot');
-		dot.style.setProperty('background-color', colFg);
+		dot.setCssStyles({ backgroundColor: colFg });
 		titleEl.createDiv({ text: 'TOTAL ITEMS', cls: 'dash-widget-title' });
 
 		const actions = header.createDiv('dash-widget-actions');
@@ -561,51 +576,11 @@ export class DashboardView extends ItemView {
 		};
 
 		const body = card.createDiv('dash-widget-body');
-		const numCard = body.createDiv('dash-number-card dash-clickable');
-		numCard.style.cursor = 'pointer';
-		numCard.setAttribute('title', 'Click to open Glance View for all items');
+		const numCard = body.createDiv('dash-number-card');
 		const iconWrap = numCard.createDiv('dash-number-icon');
 		setIcon(iconWrap, icon);
 		numCard.createDiv({ text: String(total), cls: 'dash-number-value' });
 		numCard.createDiv({ text: 'TOTAL ITEMS', cls: 'dash-number-label' });
-
-		numCard.onclick = () => {
-			const allRecords: RawRecord[] = [];
-			for (const col of cols) {
-				allRecords.push(...reader.loadRecords(col, this.activeMode, this.year));
-			}
-			const overviewCol: CollectionConfig = {
-				id: 'overview',
-				name: 'All Collections',
-				icon: icon,
-				color: accentColor,
-				scanMode: 'folder',
-				schema: [],
-				libraryWidgets: [],
-				yearWidgets: [],
-				drilldownConfig: { layout: 'cards', cardSize: 200, fields: [], imageFit: 'cover', imageAspectRatio: 1.0 }
-			};
-			this.glanceDrilldown.show({
-				parentEl: this.contentEl,
-				col: overviewCol,
-				config: {
-					id: 'total-items-drilldown',
-					type: 'number-card',
-					title: 'Total Items',
-					field: '',
-					size: resolvedSize,
-				},
-				initialFilter: null,
-				records: allRecords,
-				globalYear: this.activeMode === 'year' ? this.year : 'all-time',
-				onSaveQuiet: () => this.saveQuiet(),
-				onReloadRecords: () => {
-					const rdr = new CollectionReader(this.app);
-					const yr = this.activeMode === 'year' ? this.year : 'all-time';
-					return this.settings.collections.flatMap(c => rdr.loadRecords(c, this.activeMode, yr));
-				}
-			});
-		};
 	}
 
 	private renderMediaBreakdown(grid: HTMLElement, item: OverviewItem): void {
@@ -639,13 +614,15 @@ export class DashboardView extends ItemView {
 		const colFg = getAdaptiveForeground(accentColor, isDarkTheme);
 		const colRgb = hexToRgbString(colFg);
 
-		const card = activeDocument.createElement('div');
-		card.className = `dash-widget ${sizeToClass(resolvedBreakdownSize)} dash-widget-pinref`;
-		card.style.setProperty('--collection-color', accentColor);
-		card.style.setProperty('--col-fg', colFg);
-		card.style.setProperty('--col-rgb', colRgb);
-		card.dataset.widgetId = item.id;
-		grid.appendChild(card);
+		const card = grid.createDiv({
+			cls: `dash-widget ${sizeToClass(resolvedBreakdownSize)} dash-widget-pinref`,
+			attr: { 'data-widget-id': item.id },
+		});
+		card.setCssProps({
+			'--collection-color': accentColor,
+			'--col-fg': colFg,
+			'--col-rgb': colRgb,
+		});
 
 		attachResizeHandles(card, grid, resolvedBreakdownSize, async (newSize) => {
 			item.size = newSize;
@@ -662,7 +639,7 @@ export class DashboardView extends ItemView {
 
 		const titleEl = header.createDiv('dash-widget-title-wrap');
 		const dot = titleEl.createDiv('dash-widget-color-dot');
-		dot.style.setProperty('background-color', colFg);
+		dot.setCssStyles({ backgroundColor: colFg });
 		titleEl.createDiv({ text: 'MEDIA BREAKDOWN', cls: 'dash-widget-title' });
 
 		const actions = header.createDiv('dash-widget-actions');
@@ -695,17 +672,18 @@ export class DashboardView extends ItemView {
 
 		const body = card.createDiv('dash-widget-body');
 		const heightVal = resolvedBreakdownSize.height === 'mini' ? '120px' : '240px';
-		body.style.setProperty('height', heightVal);
-		body.style.setProperty('min-height', heightVal);
-		body.style.setProperty('max-height', heightVal);
+		body.setCssStyles({
+			height: heightVal,
+			minHeight: heightVal,
+			maxHeight: heightVal,
+		});
 
 		if (totalItems === 0) {
 			body.createDiv({ text: `No data recorded for ${this.year === 'all-time' ? 'all time' : this.year}`, cls: 'dash-widget-empty' });
 			return;
 		}
 
-		const canvas = body.createEl('canvas', { cls: 'dash-canvas-full' });
-		canvas.style.cursor = 'pointer';
+		const canvas = body.createEl('canvas', { cls: 'dash-canvas-full dash-clickable' });
 		this.chartFactoryQueue.push(() => {
 			const ctMap: Record<string, string> = {
 				'doughnut': 'doughnut', 'pie': 'pie',
@@ -794,7 +772,7 @@ export class DashboardView extends ItemView {
 				}
 			};
 
-			this.charts.push(chart as unknown as Chart);
+			this.charts.push(chart);
 		});
 	}
 
@@ -806,15 +784,19 @@ export class DashboardView extends ItemView {
 		const colContrast = getContrastTextColor(colFg);
 
 		const toolbar = el.createDiv('dash-collection-toolbar');
-		toolbar.style.setProperty('--collection-color', col.color);
-		toolbar.style.setProperty('--col-fg', colFg);
-		toolbar.style.setProperty('--col-rgb', colRgb);
-		toolbar.style.setProperty('--col-contrast', colContrast);
+		toolbar.setCssProps({
+			'--collection-color': col.color,
+			'--col-fg': colFg,
+			'--col-rgb': colRgb,
+			'--col-contrast': colContrast,
+		});
 
 		const colLabel = toolbar.createDiv('dash-collection-label');
 		const colIcon = colLabel.createDiv('dash-col-icon');
-		colIcon.style.setProperty('background-color', colFg);
-		colIcon.style.setProperty('color', colContrast);
+		colIcon.setCssStyles({
+			backgroundColor: colFg,
+			color: colContrast,
+		});
 		setIcon(colIcon, col.icon);
 		colLabel.createDiv({ text: col.name, cls: 'dash-col-name' });
 
@@ -871,21 +853,24 @@ export class DashboardView extends ItemView {
 
 		const isDarkTheme = this.isDark;
 		const resolvedSize = migrateSize(config.size);
-		const card = activeDocument.createElement('div');
-		card.className = `dash-widget ${sizeToClass(resolvedSize)} ${isPinRef ? 'dash-widget-pinref' : ''}`;
+		const card = createDiv({
+			cls: `dash-widget ${sizeToClass(resolvedSize)} ${isPinRef ? 'dash-widget-pinref' : ''}`,
+			attr: { 'data-widget-id': config.id },
+		});
 		if (insertBeforeEl) {
 			grid.insertBefore(card, insertBeforeEl);
 			insertBeforeEl.remove();
 		} else {
 			grid.appendChild(card);
 		}
-		card.dataset.widgetId = config.id;
 		const accentColor = isPinRef ? (this.settings.overviewColor || col.color) : col.color;
 		const colFg = getAdaptiveForeground(accentColor, isDarkTheme);
 		const colRgb = hexToRgbString(colFg);
-		card.style.setProperty('--collection-color', accentColor);
-		card.style.setProperty('--col-fg', colFg);
-		card.style.setProperty('--col-rgb', colRgb);
+		card.setCssProps({
+			'--collection-color': accentColor,
+			'--col-fg': colFg,
+			'--col-rgb': colRgb,
+		});
 
 		attachResizeHandles(card, grid, resolvedSize, async (newSize) => {
 			config.size = newSize;
@@ -921,7 +906,7 @@ export class DashboardView extends ItemView {
 
 		const titleEl = header.createDiv('dash-widget-title-wrap');
 		const dot = titleEl.createDiv('dash-widget-color-dot');
-		dot.style.setProperty('background-color', accentColor);
+		dot.setCssStyles({ backgroundColor: accentColor });
 		titleEl.createDiv({ text: config.title, cls: 'dash-widget-title' });
 
 		const actions = header.createDiv('dash-widget-actions');
@@ -1006,7 +991,7 @@ export class DashboardView extends ItemView {
 					const reader = new CollectionReader(this.app);
 					const recs = reader.loadRecords(col, this.activeMode, this.year);
 					const parentGrid = card.parentElement!;
-					const placeholder = activeDocument.createElement('div');
+					const placeholder = createDiv();
 					parentGrid.insertBefore(placeholder, card);
 					card.remove();
 					this.buildWidgetCard(parentGrid, col, cfg, recs, false, true, placeholder);
@@ -1040,7 +1025,7 @@ export class DashboardView extends ItemView {
 		const factory = new WidgetFactory(this.cssVar.bind(this));
 		this.chartFactoryQueue.push(() => {
 			factory.render({ 
-				body, config, records: widgetRecords, collection: col, charts: this.charts as unknown as import('chart.js').Chart[],
+				body, config, records: widgetRecords, collection: col, charts: this.charts,
 				colorTheme: this.settings.colorPaletteTheme,
 				year: this.activeMode === 'year' ? this.year : 'all-time',
 				onDrilldown: (filterVal) => {

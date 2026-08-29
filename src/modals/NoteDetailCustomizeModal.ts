@@ -21,7 +21,7 @@ export class NoteDetailCustomizeModal extends Modal {
 	}
 
 	onOpen(): void {
-		this.containerEl.style.setProperty('z-index', '3600', 'important');
+		this.containerEl.setCssStyles({ zIndex: '3600' });
 		this.modalEl.addClass('dash-modal-dialog', 'dash-note-customize-dialog');
 
 		const { contentEl } = this;
@@ -34,10 +34,12 @@ export class NoteDetailCustomizeModal extends Modal {
 		const colRgb = hexToRgbString(colFg);
 		const colContrast = getContrastTextColor(colFg);
 
-		this.modalEl.style.setProperty('--collection-color', baseColor);
-		this.modalEl.style.setProperty('--col-fg', colFg);
-		this.modalEl.style.setProperty('--col-rgb', colRgb);
-		this.modalEl.style.setProperty('--col-contrast', colContrast);
+		this.modalEl.setCssProps({
+			'--collection-color': baseColor,
+			'--col-fg': colFg,
+			'--col-rgb': colRgb,
+			'--col-contrast': colContrast,
+		});
 
 		// ── Header ────────────────────────────────────────────────
 		const header = contentEl.createDiv('ndm-cust-header');
@@ -106,18 +108,19 @@ export class NoteDetailCustomizeModal extends Modal {
 		};
 
 		if (this.selectedStatusField === '__none__') {
-			optionsRow.style.setProperty('display', 'none');
+			optionsRow.hide();
 		}
 
 		const updateOptionsInput = (fieldKey: string) => {
 			if (!fieldKey || fieldKey === '__none__') {
 				this.statusOptionsText = '';
 				optionsInput.value = '';
-				optionsRow.style.setProperty('display', fieldKey === '__none__' ? 'none' : '');
+				if (fieldKey === '__none__') optionsRow.hide();
+				else optionsRow.show();
 				return;
 			}
 
-			optionsRow.style.setProperty('display', '');
+			optionsRow.show();
 			const found = this.col.schema.find(s => s.key.toLowerCase() === fieldKey.toLowerCase());
 			let newOptions: string[] = [];
 

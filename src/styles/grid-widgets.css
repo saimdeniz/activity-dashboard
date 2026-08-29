@@ -28,8 +28,8 @@
 
 .dash-col-icon svg,
 .dash-col-icon .svg-icon {
-  width: 15px !important;
-  height: 15px !important;
+  width: 15px;
+  height: 15px;
 }
 
 .dash-col-icon-accent {
@@ -50,10 +50,10 @@
   font-weight: 600;
   padding: 6px 14px;
   border-radius: 8px;
-  background: var(--col-fg, var(--interactive-accent)) !important;
-  color: var(--col-contrast, #fff) !important;
-  border: none !important;
-  box-shadow: 0 3px 12px rgba(var(--col-rgb, 129, 140, 248), 0.38) !important;
+  background: var(--col-fg, var(--interactive-accent));
+  color: var(--col-contrast, #fff);
+  border: none;
+  box-shadow: 0 3px 12px rgba(var(--col-rgb, 129, 140, 248), 0.38);
   transition: all 0.15s ease;
   cursor: pointer;
 }
@@ -61,14 +61,14 @@
 .dash-add-widget-btn:hover {
   filter: brightness(1.12);
   transform: translateY(-1px);
-  box-shadow: 0 5px 16px rgba(var(--col-rgb, 129, 140, 248), 0.5) !important;
+  box-shadow: 0 5px 16px rgba(var(--col-rgb, 129, 140, 248), 0.5);
 }
 
 .dash-add-widget-btn svg,
 .dash-add-widget-btn .svg-icon {
-  width: 14px !important;
-  height: 14px !important;
-  stroke: currentColor !important;
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
 }
 
 /* ── 12-Column Grid ─────────────────────────────────────────── */
@@ -169,8 +169,8 @@
 
 .dash-widget-h-mini .dash-number-icon svg,
 .dash-widget-h-mini .dash-number-icon .svg-icon {
-  width: 16px !important;
-  height: 16px !important;
+  width: 16px;
+  height: 16px;
 }
 
 .dash-widget-h-mini .dash-number-value {
@@ -279,8 +279,8 @@
 
 .dash-widget-action-btn svg,
 .dash-widget-action-btn .svg-icon {
-  width: 13px !important;
-  height: 13px !important;
+  width: 13px;
+  height: 13px;
 }
 
 /* ── Body ───────────────────────────────────────────────────── */
@@ -334,8 +334,8 @@
 
 .dash-number-icon svg,
 .dash-number-icon .svg-icon {
-  width: 24px !important;
-  height: 24px !important;
+  width: 24px;
+  height: 24px;
 }
 
 .dash-number-value {
@@ -442,9 +442,9 @@
 .dash-canvas,
 .dash-canvas-wide,
 .dash-canvas-full {
-  width: 100% !important;
-  height: 100% !important;
-  max-height: 100% !important;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
   display: block;
 }
 
@@ -532,7 +532,7 @@
 }
 
 .dash-widget.dash-resizing {
-  transition: none !important;
+  transition: none;
   outline: 2px solid var(--interactive-accent);
   outline-offset: 1px;
 }
@@ -544,7 +544,7 @@
 }
 
 .dash-drag-over {
-  border-color: var(--interactive-accent) !important;
+  border-color: var(--interactive-accent);
   transform: scale(1.01);
 }
 

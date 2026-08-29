@@ -48,8 +48,10 @@ export function renderRankingWidget(params: {
 
 			const barTrack = body.createDiv('dash-ranking-bar-track');
 			const barFill = barTrack.createDiv('dash-ranking-bar-fill');
-			barFill.style.width = `${pct}%`;
-			barFill.style.backgroundColor = CHART_PALETTE[i % CHART_PALETTE.length];
+			barFill.setCssStyles({
+				width: `${pct}%`,
+				backgroundColor: CHART_PALETTE[i % CHART_PALETTE.length],
+			});
 
 			row.createDiv({ text: formatValue(value), cls: 'dash-ranking-value' });
 		});
@@ -75,7 +77,7 @@ export function renderRankingWidget(params: {
 	else if (config.legendPosition) displayLegend = true;
 
 	charts.push(new Chart(canvas, {
-		type: isBar ? 'bar' : (chartType as 'line' | 'bar' | 'pie' | 'doughnut' | 'radar'),
+		type: isBar ? 'bar' : chartType,
 		data: {
 			labels,
 			datasets: [{
