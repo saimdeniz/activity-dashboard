@@ -121,13 +121,33 @@ export class NoteDetailModal extends Modal {
 				b.createSpan({ text: yr });
 			}
 		}
-		const scoreVal = fields.onlineRating || fields.rating || fields.score || fields.puan;
-		if (!isFieldEmpty(scoreVal)) {
+		const cfgRatingScale = this.col.noteDetailConfig?.ratingScale ?? 'auto';
+		const cfgRatingField = this.col.noteDetailConfig?.ratingField;
+
+		let scoreVal: unknown = undefined;
+		if (cfgRatingField === '__none__' || cfgRatingScale === 'none') {
+			scoreVal = undefined;
+		} else if (cfgRatingField && cfgRatingField.trim()) {
+			scoreVal = fields[cfgRatingField.trim()];
+		} else {
+			scoreVal = fields.onlineRating ?? fields.rating ?? fields.score ?? fields.puan ?? fields.userRating ?? fields.communityRating;
+		}
+
+		if (cfgRatingScale !== 'none' && !isFieldEmpty(scoreVal)) {
 			const rNum = typeof scoreVal === 'number' ? scoreVal : parseFloat(String(scoreVal));
 			if (!isNaN(rNum) && rNum > 0) {
+				let scaleText = '/ 10';
+				if (cfgRatingScale === '5') scaleText = '/ 5';
+				else if (cfgRatingScale === '10') scaleText = '/ 10';
+				else if (cfgRatingScale === '100') scaleText = '/ 100';
+				else {
+					if (rNum <= 5 && String(scoreVal).includes('.')) scaleText = '/ 5';
+					else if (rNum <= 10) scaleText = '/ 10';
+					else scaleText = '/ 100';
+				}
 				const b = badges.createDiv('ndm-badge ndm-badge-gold');
 				setIcon(b.createSpan(), 'star');
-				b.createSpan({ text: rNum <= 10 ? `${rNum} / 10` : `${rNum} / 100` });
+				b.createSpan({ text: `${rNum} ${scaleText}` });
 			}
 		}
 

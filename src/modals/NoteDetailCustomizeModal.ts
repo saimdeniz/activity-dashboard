@@ -7,6 +7,7 @@ export class NoteDetailCustomizeModal extends Modal {
 	private selectedStatusField: string;
 	private statusOptionsText: string;
 	private selectedLinksPosition: 'cover' | 'topbar';
+	private selectedRatingScale: 'auto' | '5' | '10' | '100' | 'none';
 
 	constructor(
 		app: App,
@@ -20,6 +21,7 @@ export class NoteDetailCustomizeModal extends Modal {
 		this.selectedStatusField = cfg.statusField ?? '';
 		this.statusOptionsText = cfg.statusOptions ? cfg.statusOptions.join(', ') : '';
 		this.selectedLinksPosition = cfg.linksPosition ?? 'cover';
+		this.selectedRatingScale = (cfg.ratingScale as 'auto' | '5' | '10' | '100' | 'none') ?? 'auto';
 	}
 
 	onOpen(): void {
@@ -294,6 +296,73 @@ export class NoteDetailCustomizeModal extends Modal {
 			}
 		};
 
+		// ── Section 4: Rating Scale ───────────────────────────────
+		const sec4 = body.createDiv('ndm-cust-section');
+		const sec4Header = sec4.createDiv('ndm-cust-sec-title');
+		setIcon(sec4Header.createSpan('ndm-cust-sec-icon'), 'star');
+		sec4Header.createSpan({ text: 'Rating System' });
+
+		sec4.createDiv({
+			text: 'Rating scale format for the header star badge.',
+			cls: 'ndm-cust-sec-desc'
+		});
+
+		const ratingRow = sec4.createDiv('ndm-cust-input-row');
+		ratingRow.createSpan({ text: 'Scale:', cls: 'ndm-cust-label' });
+
+		const ratingDropWrap = ratingRow.createDiv('dash-custom-dropdown ndm-cust-dropdown');
+		const ratingDropBtn = ratingDropWrap.createDiv('dash-custom-dropdown-btn');
+		
+		const ratingLabels: Record<string, string> = {
+			'auto': 'Auto Detect (Default)',
+			'5': '5-Star Scale (/ 5)',
+			'10': '10-Point Scale (/ 10)',
+			'100': '100-Point Scale (/ 100)',
+			'none': 'Disabled (Hide Badge)',
+		};
+
+		const ratingDropLabel = ratingDropBtn.createSpan({
+			text: ratingLabels[this.selectedRatingScale] || 'Auto Detect (Default)'
+		});
+		const ratingDropArrow = ratingDropBtn.createSpan('dash-custom-dropdown-arrow');
+		setIcon(ratingDropArrow, 'chevron-down');
+
+		const ratingDropList = ratingDropWrap.createDiv('dash-custom-dropdown-list hidden');
+
+		const ratingOptions: [('auto' | '5' | '10' | '100' | 'none'), string][] = [
+			['auto', 'Auto Detect (Default)'],
+			['5', '5-Star Scale (/ 5)'],
+			['10', '10-Point Scale (/ 10)'],
+			['100', '100-Point Scale (/ 100)'],
+			['none', 'Disabled (Hide Badge)'],
+		];
+
+		ratingOptions.forEach(([val, label]) => {
+			const item = ratingDropList.createDiv(`dash-custom-dropdown-item ${this.selectedRatingScale === val ? 'active' : ''}`);
+			item.setText(label);
+			item.onclick = (e) => {
+				e.stopPropagation();
+				this.selectedRatingScale = val;
+				ratingDropLabel.setText(label);
+				ratingDropList.addClass('hidden');
+				ratingDropBtn.removeClass('open');
+				ratingDropList.querySelectorAll('.dash-custom-dropdown-item').forEach(el => el.removeClass('active'));
+				item.addClass('active');
+			};
+		});
+
+		ratingDropBtn.onclick = (e) => {
+			e.stopPropagation();
+			const isOpen = !ratingDropList.hasClass('hidden');
+			if (isOpen) {
+				ratingDropList.addClass('hidden');
+				ratingDropBtn.removeClass('open');
+			} else {
+				ratingDropList.removeClass('hidden');
+				ratingDropBtn.addClass('open');
+			}
+		};
+
 		// ── Footer ────────────────────────────────────────────────
 		const footer = contentEl.createDiv('ndm-cust-footer');
 
@@ -317,6 +386,7 @@ export class NoteDetailCustomizeModal extends Modal {
 			cfg.statusOptions = parsedOptions.length > 0 ? parsedOptions : undefined;
 			cfg.highlightFields = this.selectedHighlights.length > 0 ? this.selectedHighlights : undefined;
 			cfg.linksPosition = this.selectedLinksPosition;
+			cfg.ratingScale = this.selectedRatingScale;
 
 			try {
 				await this.onSave();

@@ -88,6 +88,8 @@ export interface NoteDetailConfig {
 	statusOptions?: string[];   // Button options (e.g. ["Owned", "Wishlist", "Delisted"])
 	highlightFields?: string[]; // Selected highlight fields (max 8)
 	linksPosition?: 'cover' | 'topbar'; // 'cover' (under cover poster) or 'topbar' (topbar dropdown menu)
+	ratingField?: string;       // Custom rating property name (e.g. "onlineRating", "rating", "score")
+	ratingScale?: 'auto' | '5' | '10' | '100' | 'none'; // Max rating scale (/5, /10, /100, auto, or none)
 }
 
 // ─── Collection Configuration ────────────────────────────────────────────────
