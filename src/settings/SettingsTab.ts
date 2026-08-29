@@ -26,6 +26,7 @@ const ICON_PRESETS = [
 	'leaf', 'sun', 'moon', 'clock', 'calendar', 'map', 'compass',
 ];
 
+// eslint-disable-next-line obsidianmd/settings-tab/prefer-setting-definitions
 export class DashboardSettingTab extends PluginSettingTab {
 	private expandedId: string | null = null;
 	private closeDropdowns: (() => void)[] = [];
