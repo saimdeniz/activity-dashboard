@@ -371,6 +371,31 @@
 .dash-tab.active .dash-tab-text {
   color: var(--tab-text-color, var(--text-on-accent, #fff));
 }
+
+.dash-view button.dash-add-widget-btn,
+.dash-page-header .dash-header-actions button.dash-add-widget-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: var(--col-fg, var(--interactive-accent));
+  color: var(--col-contrast, #fff);
+  border: none;
+  box-shadow: 0 3px 12px rgba(var(--col-rgb, 129, 140, 248), 0.38);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.dash-view button.dash-add-widget-btn:hover,
+.dash-page-header .dash-header-actions button.dash-add-widget-btn:hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 16px rgba(var(--col-rgb, 129, 140, 248), 0.5);
+}
+
 /* ═══════════════════════════════════════════════════════════════
    Grid Layout, Vibrant Widget Cards, Sizing & Drag Handles
    ═══════════════════════════════════════════════════════════════ */
@@ -416,25 +441,25 @@
 }
 
 .dash-add-widget-btn {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  font-size: 0.84rem !important;
-  font-weight: 600 !important;
-  padding: 6px 14px !important;
-  border-radius: 8px !important;
-  background: var(--col-fg, var(--interactive-accent)) !important;
-  color: var(--col-contrast, #fff) !important;
-  border: none !important;
-  box-shadow: 0 3px 12px rgba(var(--col-rgb, 129, 140, 248), 0.38) !important;
-  transition: all 0.15s ease !important;
-  cursor: pointer !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: var(--col-fg, var(--interactive-accent));
+  color: var(--col-contrast, #fff);
+  border: none;
+  box-shadow: 0 3px 12px rgba(var(--col-rgb, 129, 140, 248), 0.38);
+  transition: all 0.15s ease;
+  cursor: pointer;
 }
 
 .dash-add-widget-btn:hover {
-  filter: brightness(1.12) !important;
-  transform: translateY(-1px) !important;
-  box-shadow: 0 5px 16px rgba(var(--col-rgb, 129, 140, 248), 0.5) !important;
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 16px rgba(var(--col-rgb, 129, 140, 248), 0.5);
 }
 
 .dash-add-widget-btn svg,
