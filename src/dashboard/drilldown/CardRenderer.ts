@@ -11,11 +11,7 @@ export function resolveImageSrc(app: App, raw: string): string | null {
 	if (wikiMatch) {
 		const innerPath = wikiMatch[1].trim();
 		if (/\.(jpg|jpeg|png|webp|gif|svg|avif)$/i.test(innerPath)) {
-			let file = app.vault.getAbstractFileByPath(innerPath);
-			if (!file) {
-				const basename = innerPath.split('/').pop() ?? innerPath;
-				file = app.vault.getFiles().find(f => f.name === basename || f.path.endsWith('/' + basename)) ?? null;
-			}
+			const file = app.metadataCache.getFirstLinkpathDest(innerPath, '') || app.vault.getAbstractFileByPath(innerPath);
 			if (file instanceof TFile) {
 				return app.vault.getResourcePath(file);
 			}
@@ -23,11 +19,7 @@ export function resolveImageSrc(app: App, raw: string): string | null {
 	}
 
 	if (/\.(jpg|jpeg|png|webp|gif|svg|avif)$/i.test(s)) {
-		let file = app.vault.getAbstractFileByPath(s);
-		if (!file) {
-			const basename = s.split('/').pop() ?? s;
-			file = app.vault.getFiles().find(f => f.name === basename || f.path.endsWith('/' + basename)) ?? null;
-		}
+		const file = app.metadataCache.getFirstLinkpathDest(s, '') || app.vault.getAbstractFileByPath(s);
 		if (file instanceof TFile) return app.vault.getResourcePath(file);
 	}
 

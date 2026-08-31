@@ -63,7 +63,7 @@ export function renderRankingWidget(params: {
 	const gridColor = cssVar('--background-modifier-border') || '#333';
 	const labels = ranked.map(([l]) => l);
 	const values = ranked.map(([, v]) => v);
-	const colors = CHART_PALETTE.slice(0, labels.length) as string[];
+	const colors = labels.map((_, i) => CHART_PALETTE[i % CHART_PALETTE.length]);
 
 	const canvas = el.createEl('canvas', { cls: 'dash-canvas' });
 

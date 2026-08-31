@@ -82,10 +82,10 @@ export function renderDistributionWidget(params: {
 			datasets: [{
 				label: config.field,
 				data: values,
-				backgroundColor: isBar || isLineOrRadar 
-					? colors.map(c => c.replace('hsl(', 'hsla(').replace(')', ', 0.8)')) 
+				backgroundColor: (isBar || isLineOrRadar)
+					? colors.map(c => c.startsWith('#') ? c + 'cc' : c) 
 					: colors,
-				borderColor: isLineOrRadar ? colors[0] : 'transparent',
+				borderColor: isLineOrRadar ? (colors[0] || '#818cf8') : 'transparent',
 				borderWidth: isLineOrRadar ? 2 : 0,
 				borderRadius: isBar ? 4 : 0,
 				fill: isLineOrRadar ? true : undefined,

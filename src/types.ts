@@ -83,11 +83,18 @@ export interface DrilldownConfig {
 
 // ─── Note Detail View Config ──────────────────────────────────────────────────
 
+export interface CustomLinkConfig {
+	fieldKey: string;           // Frontmatter field containing URL (e.g. "datasource", "link", "comicVine")
+	label: string;              // Custom display title (e.g. "League of Comic Geeks")
+	icon?: string;              // Lucide icon name (e.g. "book-open", "globe")
+}
+
 export interface NoteDetailConfig {
 	statusField?: string;       // Frontmatter field for quick buttons (e.g. "ownership", "readStatus", "format")
 	statusOptions?: string[];   // Button options (e.g. ["Owned", "Wishlist", "Delisted"])
 	highlightFields?: string[]; // Selected highlight fields (max 8)
 	linksPosition?: 'cover' | 'topbar'; // 'cover' (under cover poster) or 'topbar' (topbar dropdown menu)
+	customLinks?: CustomLinkConfig[];   // Custom title & icon mappings for external links
 	ratingField?: string;       // Custom rating property name (e.g. "onlineRating", "rating", "score")
 	ratingScale?: 'auto' | '5' | '10' | '100' | 'none'; // Max rating scale (/5, /10, /100, auto, or none)
 }

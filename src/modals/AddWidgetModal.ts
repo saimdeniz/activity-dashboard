@@ -7,6 +7,7 @@ export class AddWidgetModal extends Modal {
 	private collection: CollectionConfig;
 	private onSave: (cfg: WidgetConfig) => void | Promise<void>;
 	private editing: WidgetConfig | null;
+	private closeOutsideHandler: ((ev: MouseEvent) => void) | null = null;
 
 	constructor(
 		app: App,
@@ -155,17 +156,12 @@ export class AddWidgetModal extends Modal {
 		};
 		fieldSearch.oninput = renderFieldList;
 
-		const closeOutside = (ev: MouseEvent) => {
+		this.closeOutsideHandler = (ev: MouseEvent) => {
 			if (!fieldPickerWrap.contains(ev.target as Node)) {
 				toggleDropdown(false);
 			}
 		};
-		activeDocument.addEventListener('click', closeOutside);
-		const origClose = this.close.bind(this);
-		this.close = () => {
-			activeDocument.removeEventListener('click', closeOutside);
-			origClose();
-		};
+		(this.containerEl.ownerDocument || document).addEventListener('click', this.closeOutsideHandler);
 
 		// ── Chart Type Segmented Pills ───────────────────────────
 		const chartWrap = contentEl.createDiv('dash-modal-section');
@@ -442,7 +438,7 @@ export class AddWidgetModal extends Modal {
 				chartType: (widgetType === 'distribution' || widgetType === 'boolean' || widgetType === 'activity' || widgetType === 'ranking') ? chartType : undefined,
 				legendPosition: (widgetType === 'distribution' || widgetType === 'boolean' || widgetType === 'activity' || widgetType === 'ranking') ? legendPosition : undefined,
 				heatmapIntensityField: widgetType === 'heatmap' ? heatIntensityInput.value.trim() || undefined : undefined,
-				size: e ? migrateSize(e.size) : { height: widgetType === 'heatmap' ? 'small' : 'small', span: widgetType === 'heatmap' ? 12 : 6 },
+				size: e ? migrateSize(e.size) : { height: 'small', span: widgetType === 'heatmap' ? 12 : 6 },
 				topN,
 				icon: widgetType === 'number-card' ? selectedIcon : undefined,
 				pinnedToOverview: e?.pinnedToOverview ?? false,
@@ -455,6 +451,10 @@ export class AddWidgetModal extends Modal {
 	}
 
 	onClose(): void {
+		if (this.closeOutsideHandler) {
+			(this.containerEl.ownerDocument || document).removeEventListener('click', this.closeOutsideHandler);
+			this.closeOutsideHandler = null;
+		}
 		this.contentEl.empty();
 	}
 

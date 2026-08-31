@@ -8,7 +8,7 @@ import { NoteDetailCustomizeModal } from './NoteDetailCustomizeModal';
 function isFieldEmpty(val: unknown): boolean {
 	if (val === undefined || val === null) return true;
 	if (typeof val === 'boolean') return false;
-	if (typeof val === 'number') return isNaN(val) || val === 0;
+	if (typeof val === 'number') return isNaN(val);
 	if (typeof val === 'string') {
 		const s = val.replace(/[\s\u00A0\u200B\uFEFF]/g, '').toLowerCase();
 		return s === '' || s === '""' || s === "''" || s === '—' || s === '-' || s === 'null' || s === 'undefined' || s === '[]' || s === '{}';
@@ -39,7 +39,7 @@ export class NoteDetailModal extends Modal {
 		contentEl.addClass('dash-note-detail-modal');
 
 		const baseColor = this.col.color || '#818cf8';
-		const isDark = !document.body.classList.contains('theme-light');
+		const isDark = !(typeof activeDocument !== 'undefined' && activeDocument.body ? activeDocument.body : document.body).classList.contains('theme-light');
 		const colFg = getAdaptiveForeground(baseColor, isDark);
 		const colRgb = hexToRgbString(colFg);
 		const colContrast = getContrastTextColor(colFg);
@@ -280,7 +280,7 @@ export class NoteDetailModal extends Modal {
 				linkBtn.createSpan({ text: '↗', cls: 'ndm-cover-link-arrow' });
 				linkBtn.onclick = (e) => {
 					e.stopPropagation();
-					window.open(lnk.url, '_blank');
+					window.open(lnk.url, '_blank', 'noopener,noreferrer');
 				};
 			});
 		}
@@ -339,46 +339,53 @@ export class NoteDetailModal extends Modal {
 				}
 			});
 
-			options.slice(0, 10).forEach(opt => {
+			let isSaving = false;
+		options.slice(0, 10).forEach(opt => {
 				const isActive = currentValues.some(cv => cv.toLowerCase() === opt.toLowerCase());
 				const pill = pillRow.createEl('button', {
 					cls: `ndm-pill ${isActive ? 'ndm-pill-active' : ''}`,
 					text: opt
 				});
 				pill.onclick = async () => {
-					if (Array.isArray(rawVal)) {
-						let updated: string[];
-						if (currentValues.some(cv => cv.toLowerCase() === opt.toLowerCase())) {
-							updated = currentValues.filter(cv => cv.toLowerCase() !== opt.toLowerCase());
-							pill.removeClass('ndm-pill-active');
+					if (isSaving) return;
+					isSaving = true;
+					try {
+						if (Array.isArray(rawVal)) {
+							let updated: string[];
+							if (currentValues.some(cv => cv.toLowerCase() === opt.toLowerCase())) {
+								updated = currentValues.filter(cv => cv.toLowerCase() !== opt.toLowerCase());
+								pill.removeClass('ndm-pill-active');
+							} else {
+								updated = [...currentValues, opt];
+								pill.addClass('ndm-pill-active');
+							}
+							currentValues = updated;
+							await this.updateSingleProperty(statusKey, updated);
+						} else if (typeof rawVal === 'string' && (rawVal.includes(',') || rawVal.includes('|'))) {
+							let updated: string[];
+							if (currentValues.some(cv => cv.toLowerCase() === opt.toLowerCase())) {
+								updated = currentValues.filter(cv => cv.toLowerCase() !== opt.toLowerCase());
+								pill.removeClass('ndm-pill-active');
+							} else {
+								updated = [...currentValues, opt];
+								pill.addClass('ndm-pill-active');
+							}
+							currentValues = updated;
+							await this.updateSingleProperty(statusKey, updated.join(', '));
 						} else {
-							updated = [...currentValues, opt];
-							pill.addClass('ndm-pill-active');
+							if (currentValues.some(cv => cv.toLowerCase() === opt.toLowerCase())) {
+								currentValues = [];
+								pill.removeClass('ndm-pill-active');
+								await this.updateSingleProperty(statusKey, '');
+							} else {
+								currentValues = [opt];
+								pillRow.querySelectorAll('.ndm-pill').forEach(p => p.removeClass('ndm-pill-active'));
+								pill.addClass('ndm-pill-active');
+								await this.updateSingleProperty(statusKey, opt);
+							}
 						}
-						currentValues = updated;
-						await this.updateSingleProperty(statusKey, updated);
-					} else if (typeof rawVal === 'string' && (rawVal.includes(',') || rawVal.includes('|'))) {
-						let updated: string[];
-						if (currentValues.some(cv => cv.toLowerCase() === opt.toLowerCase())) {
-							updated = currentValues.filter(cv => cv.toLowerCase() !== opt.toLowerCase());
-							pill.removeClass('ndm-pill-active');
-						} else {
-							updated = [...currentValues, opt];
-							pill.addClass('ndm-pill-active');
-						}
-						currentValues = updated;
-						await this.updateSingleProperty(statusKey, updated.join(', '));
-					} else {
-						if (currentValues.some(cv => cv.toLowerCase() === opt.toLowerCase())) {
-							currentValues = [];
-							pill.removeClass('ndm-pill-active');
-							await this.updateSingleProperty(statusKey, '');
-						} else {
-							currentValues = [opt];
-							pillRow.querySelectorAll('.ndm-pill').forEach(p => p.removeClass('ndm-pill-active'));
-							pill.addClass('ndm-pill-active');
-							await this.updateSingleProperty(statusKey, opt);
-						}
+					} finally {
+						isSaving = false;
 					}
 				};
 			});
@@ -455,8 +462,7 @@ export class NoteDetailModal extends Modal {
 				if (typeof v === 'boolean') {
 					valEl.createSpan({ text: v ? 'true' : 'false', cls: `ndm-bool ${v ? 'ndm-bool-true' : 'ndm-bool-false'}` });
 				} else if (typeof v === 'string' && /^https?:\/\//i.test(v)) {
-					const a = valEl.createEl('a', { text: v, cls: 'ndm-link', attr: { href: v, target: '_blank' } });
-					a.onclick = e => { e.stopPropagation(); window.open(v, '_blank'); };
+					const a = valEl.createEl('a', { text: v, cls: 'ndm-link', attr: { href: v, target: '_blank', rel: 'noopener noreferrer' } });
 				} else {
 					valEl.createSpan({ text: String(v) });
 				}
@@ -480,24 +486,71 @@ export class NoteDetailModal extends Modal {
 	private extractExternalLinks(fields: Record<string, unknown>): { label: string; url: string; icon: string }[] {
 		const links: { label: string; url: string; icon: string }[] = [];
 		const seen = new Set<string>();
+
+		const customMap = new Map<string, { label: string; icon?: string }>();
+		for (const cl of (this.col.noteDetailConfig?.customLinks || [])) {
+			if (cl.fieldKey && cl.label) {
+				customMap.set(cl.fieldKey.toLowerCase().trim(), { label: cl.label.trim(), icon: cl.icon?.trim() });
+			}
+		}
+
 		for (const [key, val] of Object.entries(fields)) {
 			if (isFieldEmpty(val)) continue;
 			const s = String(val).trim();
 			if (!/^https?:\/\//i.test(s)) continue;
 			if (/\.(jpg|jpeg|png|webp|gif|svg|avif)($|\?)/i.test(s)) continue;
-			const lk = key.toLowerCase(), lu = s.toLowerCase();
+
+			const lk = key.toLowerCase();
+			const lu = s.toLowerCase();
+
+			// 1. Check user custom link config first
+			if (customMap.has(lk)) {
+				const cm = customMap.get(lk)!;
+				if (!seen.has(cm.label)) {
+					seen.add(cm.label);
+					links.push({ label: cm.label, url: s, icon: cm.icon || 'external-link' });
+				}
+				continue;
+			}
+
+			// 2. Automatic domain / service detection
 			let label = '', icon = 'external-link';
-			if (lk.includes('steam') || lu.includes('steampowered.com')) { label = 'Steam'; }
+			if (lk.includes('steam') || lu.includes('steampowered.com') || lu.includes('steamcommunity.com')) { label = 'Steam'; icon = 'gamepad-2'; }
 			else if (lk.includes('hltb') || lu.includes('howlongtobeat.com')) { label = 'HLTB'; icon = 'clock'; }
 			else if (lk.includes('goodreads') || lu.includes('goodreads.com')) { label = 'Goodreads'; icon = 'book-open'; }
 			else if (lk.includes('imdb') || lu.includes('imdb.com')) { label = 'IMDb'; icon = 'film'; }
-			else if (lk.includes('igdb') || lu.includes('igdb.com')) { label = 'IGDB'; }
+			else if (lk.includes('igdb') || lu.includes('igdb.com')) { label = 'IGDB'; icon = 'gamepad-2'; }
 			else if (lk.includes('itad') || lu.includes('isthereanydeal.com')) { label = 'ITAD'; icon = 'tag'; }
-			else if (lk.includes('youtube') || lu.includes('youtube.com')) { label = 'YouTube'; icon = 'video'; }
-			else { label = key.replace(/url$/i, '').toUpperCase() || 'Link'; }
-			if (label && !seen.has(label)) { seen.add(label); links.push({ label, url: s, icon }); }
+			else if (lk.includes('youtube') || lu.includes('youtube.com') || lu.includes('youtu.be')) { label = 'YouTube'; icon = 'video'; }
+			else if (lu.includes('leagueofcomicgeeks.com') || lk.includes('comicgeeks')) { label = 'League of Comic Geeks'; icon = 'book-open'; }
+			else if (lu.includes('comicvine.gamespot.com') || lk.includes('comicvine')) { label = 'Comic Vine'; icon = 'book-open'; }
+			else if (lu.includes('storygraph.com') || lu.includes('thestorygraph.com')) { label = 'StoryGraph'; icon = 'book-open'; }
+			else if (lu.includes('letterboxd.com')) { label = 'Letterboxd'; icon = 'film'; }
+			else if (lu.includes('rawg.io')) { label = 'RAWG'; icon = 'gamepad-2'; }
+			else if (lu.includes('backloggd.com')) { label = 'Backloggd'; icon = 'gamepad-2'; }
+			else if (lu.includes('myanimelist.net')) { label = 'MyAnimeList'; icon = 'tv'; }
+			else if (lu.includes('anilist.co')) { label = 'AniList'; icon = 'tv'; }
+			else if (lu.includes('wikipedia.org')) { label = 'Wikipedia'; icon = 'globe'; }
+			else if (lu.includes('github.com')) { label = 'GitHub'; icon = 'code'; }
+			else if (lu.includes('spotify.com')) { label = 'Spotify'; icon = 'music'; }
+			else if (lu.includes('bandcamp.com')) { label = 'Bandcamp'; icon = 'music'; }
+			else {
+				try {
+					const host = new URL(s).hostname.replace(/^www\./, '');
+					const parts = host.split('.');
+					const domainName = parts.length >= 2 ? parts[parts.length - 2] : parts[0];
+					label = domainName ? domainName.charAt(0).toUpperCase() + domainName.slice(1) : (key.replace(/url$/i, '') || 'Link');
+				} catch {
+					label = key.replace(/url$/i, '').toUpperCase() || 'Link';
+				}
+			}
+
+			if (label && !seen.has(label)) {
+				seen.add(label);
+				links.push({ label, url: s, icon });
+			}
 		}
-		return links.slice(0, 4);
+		return links.slice(0, 6);
 	}
 
 	private extractListProperties(fields: Record<string, unknown>, excludeKeys: string[]): { key: string; values: string[]; icon: string }[] {

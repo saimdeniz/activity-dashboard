@@ -1,4 +1,4 @@
-import { Modal, App, setIcon } from 'obsidian';
+﻿import { Modal, App, Notice, setIcon } from 'obsidian';
 import type { OverviewItem, WidgetSize, ChartType } from '../types';
 import { migrateSize } from '../types';
 import { getAdaptiveForeground, hexToRgbString, getContrastTextColor } from '../utils/ColorUtils';
@@ -87,9 +87,14 @@ export class AddOverviewWidgetModal extends Modal {
 		footer.createEl('button', { text: 'Cancel', cls: 'dash-modal-cancel' })
 			.onclick = () => this.close();
 
-		saveBtn.onclick = () => {
-			void this.onSave(widgetType);
-			this.close();
+		saveBtn.onclick = async () => {
+			try {
+				await this.onSave(widgetType);
+				this.close();
+			} catch (err) {
+				console.error('[ActivityDashboard] Failed to save overview widget:', err);
+				new Notice('Failed to save widget: ' + String(err));
+			}
 		};
 	}
 
@@ -120,32 +125,43 @@ export class BreakdownEditModal extends Modal {
 		const dot = titleRow.createDiv('dash-modal-color-dot');
 		dot.setCssStyles({ backgroundColor: colFg });
 		titleRow.createDiv({ text: 'Media Breakdown Settings', cls: 'dash-modal-title' });
-		header.createDiv({ text: 'Configure chart representation for total items breakdown.', cls: 'dash-modal-subtitle' });
+		header.createDiv({ text: 'Configure the chart display type for media breakdown.', cls: 'dash-modal-subtitle' });
 
-		const ctWrap = contentEl.createDiv('dash-modal-section');
-		ctWrap.createDiv({ text: 'Chart Type', cls: 'dash-modal-section-label' });
-		const ctGroup = ctWrap.createDiv('dash-modal-pill-group');
-		const types: [ChartType, string][] = [
-			['doughnut', 'Doughnut'], ['pie', 'Pie'],
-			['bar-vertical', 'Bar (Vertical)'], ['bar-horizontal', 'Bar (Horizontal)'],
+		const chartWrap = contentEl.createDiv('dash-modal-section');
+		chartWrap.createDiv({ text: 'Chart Type', cls: 'dash-modal-section-label' });
+
+		const chartGroup = chartWrap.createDiv('dash-modal-pill-group');
+		const chartEntries: [ChartType, string][] = [
+			['doughnut', 'Donut'],
+			['pie', 'Pie'],
+			['bar-horizontal', 'Bar H'],
+			['bar-vertical', 'Bar V'],
+			['line', 'Line'],
+			['radar', 'Radar'],
 		];
-		types.forEach(([val, label]) => {
-			const btn = ctGroup.createEl('button', {
-				text: label, cls: `dash-modal-pill ${this.cfg.chartType === val ? 'active' : ''}`,
+		chartEntries.forEach(([t, label]) => {
+			const btn = chartGroup.createEl('button', {
+				text: label,
+				cls: `dash-modal-pill ${this.cfg.chartType === t ? 'active' : ''}`,
 			});
 			btn.onclick = () => {
-				ctGroup.querySelectorAll('.dash-modal-pill').forEach(b => b.removeClass('active'));
+				this.cfg.chartType = t;
+				chartGroup.querySelectorAll('.dash-modal-pill').forEach(b => b.removeClass('active'));
 				btn.addClass('active');
-				this.cfg.chartType = val;
 			};
 		});
 
 		const footer = contentEl.createDiv('dash-modal-footer');
 		const saveBtn = footer.createEl('button', { text: 'Save Changes', cls: 'dash-modal-save mod-cta' });
 		footer.createEl('button', { text: 'Cancel', cls: 'dash-modal-cancel' }).onclick = () => this.close();
-		saveBtn.onclick = () => {
-			void this.onSave(this.cfg);
-			this.close();
+		saveBtn.onclick = async () => {
+			try {
+				await this.onSave(this.cfg);
+				this.close();
+			} catch (err) {
+				console.error('[ActivityDashboard] Failed to save breakdown settings:', err);
+				new Notice('Failed to save settings: ' + String(err));
+			}
 		};
 	}
 
@@ -209,17 +225,22 @@ export class TotalItemsEditModal extends Modal {
 			const val = customIconInput.value.trim();
 			if (val) {
 				selectedIcon = val;
-				iconGrid.querySelectorAll('.dash-icon-picker-btn').forEach(b => b.removeClass('active'));
+				iconGrid.querySelectorAll('.dash-icon-picker-item').forEach(b => b.removeClass('active'));
 			}
 		};
 
 		const footer = contentEl.createDiv('dash-modal-footer');
 		const saveBtn = footer.createEl('button', { text: 'Save Changes', cls: 'dash-modal-save mod-cta' });
 		footer.createEl('button', { text: 'Cancel', cls: 'dash-modal-cancel' }).onclick = () => this.close();
-		saveBtn.onclick = () => {
-			this.cfg.icon = selectedIcon;
-			void this.onSave(this.cfg);
-			this.close();
+		saveBtn.onclick = async () => {
+			try {
+				this.cfg.icon = selectedIcon;
+				await this.onSave(this.cfg);
+				this.close();
+			} catch (err) {
+				console.error('[ActivityDashboard] Failed to save total items settings:', err);
+				new Notice('Failed to save settings: ' + String(err));
+			}
 		};
 	}
 

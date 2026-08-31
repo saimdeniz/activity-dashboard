@@ -21,8 +21,6 @@ import { DragDropManager } from './grid/DragDropManager';
 import { hexToRgbString, getAdaptiveForeground, getContrastTextColor, generatePalette } from '../utils/ColorUtils';
 
 ChartJS.register(...registerables);
-ChartJS.defaults.plugins.tooltip.cornerRadius = 8;
-ChartJS.defaults.plugins.tooltip.padding = 10;
 
 export const VIEW_TYPE_DASHBOARD = 'dynamic-dashboard-view';
 
@@ -32,6 +30,8 @@ export class DashboardView extends ItemView {
 	private activeTab = 'overview'; // collectionId or 'overview'
 	private charts: Chart[] = [];
 	private chartFactoryQueue: (() => void)[] = [];
+	private flushRaf: number | null = null;
+	private isRendering = false;
 	private static copiedWidgets: WidgetConfig[] | null = null;
 
 	private glanceDrilldown: GlanceDrilldown;
@@ -70,6 +70,10 @@ export class DashboardView extends ItemView {
 		this.contentEl.removeEventListener('dragend', this.onDragEndHandler);
 		this.contentEl.removeEventListener('drop', this.onDropHandler);
 		this.dragDropManager.stopAutoScroll();
+		if (this.flushRaf) {
+			window.cancelAnimationFrame(this.flushRaf);
+			this.flushRaf = null;
+		}
 		this.destroyCharts();
 		this.glanceDrilldown.close();
 	}
@@ -104,7 +108,8 @@ export class DashboardView extends ItemView {
 				
 				const newWidgets: WidgetConfig[] = DashboardView.copiedWidgets.map(w => ({
 					...w,
-					id: uid()
+					id: uid(),
+					pinnedToOverview: false
 				}));
 
 				this.setActiveWidgets(col, newWidgets);
@@ -172,6 +177,8 @@ export class DashboardView extends ItemView {
 
 	// ── Main Render Orchestration ─────────────────────────────
 	private async render(): Promise<void> {
+		if (this.isRendering) return;
+		this.isRendering = true;
 		try {
 			this.destroyCharts();
 			this.chartFactoryQueue = [];
@@ -220,16 +227,20 @@ export class DashboardView extends ItemView {
 			this.contentEl.empty();
 			const errDiv = this.contentEl.createDiv('dash-widget-empty');
 			errDiv.createDiv({ text: 'Error rendering dashboard. Please refresh or check console.' });
+		} finally {
+			this.isRendering = false;
 		}
 	}
 
 	private flushChartQueue(): void {
-		window.requestAnimationFrame(() => {
+		if (this.flushRaf) window.cancelAnimationFrame(this.flushRaf);
+		this.flushRaf = window.requestAnimationFrame(() => {
+			this.flushRaf = null;
+			if (!this.contentEl.isConnected) return;
 			this.chartFactoryQueue.forEach(fn => {
 				try { fn(); } catch (e) { console.error('[ActivityDashboard] Widget render error:', e); }
 			});
 			this.chartFactoryQueue = [];
-			WidgetFactory.applyIcons(this.contentEl);
 		});
 	}
 
@@ -272,7 +283,7 @@ export class DashboardView extends ItemView {
 			});
 			setIcon(allTimeBtn, 'infinity');
 			allTimeBtn.onclick = async () => {
-				this.year = this.year === 'all-time' ? new Date().getUTCFullYear() : 'all-time';
+				this.year = this.year === 'all-time' ? new Date().getFullYear() : 'all-time';
 				this.settings.activeYear = this.year;
 				await this.saveQuiet();
 				void this.render();
@@ -282,7 +293,7 @@ export class DashboardView extends ItemView {
 				const prev = right.createEl('button', { cls: 'dash-nav-btn', attr: { 'aria-label': 'Previous year' } });
 				setIcon(prev, 'chevron-left');
 				prev.onclick = async () => { 
-					(this.year as number)--; 
+					if (typeof this.year === 'number') this.year--; 
 					this.settings.activeYear = this.year;
 					await this.saveQuiet();
 					void this.render(); 
@@ -298,7 +309,7 @@ export class DashboardView extends ItemView {
 				const next = right.createEl('button', { cls: 'dash-nav-btn', attr: { 'aria-label': 'Next year' } });
 				setIcon(next, 'chevron-right');
 				next.onclick = async () => { 
-					(this.year as number)++; 
+					if (typeof this.year === 'number') this.year++; 
 					this.settings.activeYear = this.year;
 					await this.saveQuiet();
 					void this.render(); 
@@ -439,9 +450,11 @@ export class DashboardView extends ItemView {
 			color: colContrast,
 		});
 		setIcon(colIcon, 'home');
-		colLabel.createDiv({ text: 'Overview', cls: 'dash-col-name' });
-
-		const addBtn = toolbar.createEl('button', { cls: 'dash-add-widget-btn mod-cta' });
+		const addBtn = toolbar.createEl('button', { cls: 'dash-add-widget-btn' });
+		addBtn.setCssStyles({
+			backgroundColor: colFg,
+			color: colContrast,
+		});
 		setIcon(addBtn, 'plus');
 		addBtn.createSpan({ text: 'Add Widget' });
 		addBtn.onclick = () => {
@@ -800,7 +813,11 @@ export class DashboardView extends ItemView {
 		setIcon(colIcon, col.icon);
 		colLabel.createDiv({ text: col.name, cls: 'dash-col-name' });
 
-		const addBtn = toolbar.createEl('button', { cls: 'dash-add-widget-btn mod-cta' });
+		const addBtn = toolbar.createEl('button', { cls: 'dash-add-widget-btn' });
+		addBtn.setCssStyles({
+			backgroundColor: colFg,
+			color: colContrast,
+		});
 		setIcon(addBtn, 'plus');
 		addBtn.createSpan({ text: 'Add Widget' });
 		addBtn.onclick = () => {
@@ -973,6 +990,14 @@ export class DashboardView extends ItemView {
 				this.settings.overviewPins = this.settings.overviewPins.filter(p => p.widgetId !== config.id);
 				config.pinnedToOverview = false;
 				await this.saveQuiet();
+				const canvas = card.querySelector('canvas');
+				if (canvas) {
+					const cIdx = this.charts.findIndex(c => c.canvas === canvas);
+					if (cIdx > -1) {
+						this.charts[cIdx].destroy();
+						this.charts.splice(cIdx, 1);
+					}
+				}
 				card.remove();
 			};
 		}
@@ -993,6 +1018,14 @@ export class DashboardView extends ItemView {
 					const parentGrid = card.parentElement!;
 					const placeholder = createDiv();
 					parentGrid.insertBefore(placeholder, card);
+					const canvas = card.querySelector('canvas');
+					if (canvas) {
+						const cIdx = this.charts.findIndex(c => c.canvas === canvas);
+						if (cIdx > -1) {
+							this.charts[cIdx].destroy();
+							this.charts.splice(cIdx, 1);
+						}
+					}
 					card.remove();
 					this.buildWidgetCard(parentGrid, col, cfg, recs, false, true, placeholder);
 					this.flushChartQueue();
@@ -1006,7 +1039,18 @@ export class DashboardView extends ItemView {
 				activeWidgets = activeWidgets.filter(w => w.id !== config.id);
 				this.setActiveWidgets(col, activeWidgets);
 				this.settings.overviewPins = this.settings.overviewPins.filter(p => p.widgetId !== config.id);
+				if (this.settings.overviewLayout) {
+					this.settings.overviewLayout = this.settings.overviewLayout.filter(i => i.id !== config.id);
+				}
 				await this.saveQuiet();
+				const canvas = card.querySelector('canvas');
+				if (canvas) {
+					const cIdx = this.charts.findIndex(c => c.canvas === canvas);
+					if (cIdx > -1) {
+						this.charts[cIdx].destroy();
+						this.charts.splice(cIdx, 1);
+					}
+				}
 				card.remove();
 			};
 		}
@@ -1032,7 +1076,16 @@ export class DashboardView extends ItemView {
 					let drilldownRecords = widgetRecords;
 					if (config.type === 'activity' || config.type === 'heatmap') {
 						const reader = new CollectionReader(this.app);
-						drilldownRecords = reader.loadRecords(col, this.activeMode, 'all-time');
+						let recs = reader.loadRecords(col, this.activeMode, 'all-time');
+						if (config.filterField && config.filterValue) {
+							const targetVal = config.filterValue.toLowerCase();
+							recs = recs.filter(r => {
+								const val = r.fields[config.filterField!];
+								if (Array.isArray(val)) return val.some(v => String(v).toLowerCase() === targetVal);
+								return String(val ?? '').toLowerCase() === targetVal;
+							});
+						}
+						drilldownRecords = recs;
 					}
 					const reloadFn = () => {
 						const rdr = new CollectionReader(this.app);

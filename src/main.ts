@@ -37,20 +37,23 @@ export default class LibraryDashPlugin extends Plugin {
 			);
 
 			this.registerEvent(
-				this.app.vault.on('create', () => {
+				this.app.vault.on('create', (file) => {
 					CollectionReader.invalidateCache();
+					if (file instanceof TFile) this.scheduleSchemaRescan(file);
 				})
 			);
 
 			this.registerEvent(
 				this.app.vault.on('delete', () => {
 					CollectionReader.invalidateCache();
+					this.scheduleSchemaRescan();
 				})
 			);
 
 			this.registerEvent(
-				this.app.vault.on('rename', () => {
+				this.app.vault.on('rename', (file) => {
 					CollectionReader.invalidateCache();
+					if (file instanceof TFile) this.scheduleSchemaRescan(file);
 				})
 			);
 
@@ -58,8 +61,9 @@ export default class LibraryDashPlugin extends Plugin {
 			this.registerEvent(
 				this.app.workspace.on('css-change', () => {
 					for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_DASHBOARD)) {
-						const view = leaf.view as DashboardView;
-						view.refresh();
+						if (leaf.view instanceof DashboardView) {
+							leaf.view.refresh();
+						}
 					}
 				})
 			);
@@ -68,7 +72,10 @@ export default class LibraryDashPlugin extends Plugin {
 		}
 	}
 
+	private pendingScanFiles = new Set<TFile>();
+
 	private scheduleSchemaRescan(file?: TFile) {
+		if (file) this.pendingScanFiles.add(file);
 		if (this.scanTimeout) window.clearTimeout(this.scanTimeout);
 		this.scanTimeout = window.setTimeout(() => {
 			void (async () => {
@@ -76,12 +83,17 @@ export default class LibraryDashPlugin extends Plugin {
 					let changed = false;
 					const scanner = new SchemaScanner(this.app);
 					const reader = new CollectionReader(this.app);
+					const filesToScan = Array.from(this.pendingScanFiles);
+					this.pendingScanFiles.clear();
+
 					for (const col of this.settings.collections) {
-						if (file) {
-							if (!this.fileMatchesCollection(file, col)) continue;
+						if (filesToScan.length > 0) {
 							const totalFiles = reader.countAll(col);
-							const colChanged = scanner.updateSchemaWithFile(file, col, totalFiles);
-							if (colChanged) changed = true;
+							for (const f of filesToScan) {
+								if (!this.fileMatchesCollection(f, col)) continue;
+								const colChanged = scanner.updateSchemaWithFile(f, col, totalFiles);
+								if (colChanged) changed = true;
+							}
 						} else {
 							const newSchema = await scanner.scan(col);
 							if (JSON.stringify(col.schema) !== JSON.stringify(newSchema)) {
@@ -94,8 +106,9 @@ export default class LibraryDashPlugin extends Plugin {
 						await this.saveSettingsQuiet();
 						// Also refresh the UI config panel if it's currently open!
 						for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_DASHBOARD)) {
-							const view = leaf.view as DashboardView;
-							view.refresh();
+							if (leaf.view instanceof DashboardView) {
+								leaf.view.refresh();
+							}
 						}
 					}
 				} catch (err) {
@@ -137,7 +150,9 @@ export default class LibraryDashPlugin extends Plugin {
 		await this.saveData(this.settings);
 		// Refresh any open dashboard views
 		for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_DASHBOARD)) {
-			(leaf.view as DashboardView).refresh();
+			if (leaf.view instanceof DashboardView) {
+				leaf.view.refresh();
+			}
 		}
 	}
 

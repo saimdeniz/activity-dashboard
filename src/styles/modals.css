@@ -2092,3 +2092,117 @@
   transform: translateY(-1px);
 }
 
+
+/* ── Custom Link Mappings Builder in Customize Modal ── */
+.ndm-cust-links-builder {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(var(--col-rgb, 129, 140, 248), 0.20);
+}
+
+.ndm-cust-links-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ndm-cust-add-link-btn {
+  font-size: 0.70rem;
+  padding: 3px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--col-fg, var(--interactive-accent));
+  background: rgba(var(--col-rgb, 129, 140, 248), 0.12);
+  color: var(--col-fg, var(--interactive-accent));
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.12s ease;
+}
+
+.ndm-cust-add-link-btn:hover {
+  background: var(--col-fg, var(--interactive-accent));
+  color: var(--col-contrast, #fff);
+  transform: translateY(-1px);
+}
+
+.ndm-cust-links-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 190px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.ndm-cust-empty-links-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 6px 0;
+}
+
+.ndm-cust-link-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(var(--col-rgb, 129, 140, 248), 0.06);
+  border: 1px solid rgba(var(--col-rgb, 129, 140, 248), 0.18);
+  border-radius: 6px;
+  padding: 6px 8px;
+  box-sizing: border-box;
+}
+
+.ndm-cust-link-field-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.ndm-cust-link-icon-wrap {
+  width: 110px;
+  flex-shrink: 0;
+}
+
+.ndm-cust-link-input {
+  width: 100%;
+  background: rgba(var(--col-rgb, 129, 140, 248), 0.08);
+  border: 1px solid rgba(var(--col-rgb, 129, 140, 248), 0.22);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 0.74rem;
+  color: var(--text-normal);
+  box-sizing: border-box;
+}
+
+.ndm-cust-link-input:focus {
+  border-color: var(--col-fg, var(--interactive-accent));
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(var(--col-rgb, 129, 140, 248), 0.20);
+}
+
+.ndm-cust-link-del-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.12s ease;
+}
+
+.ndm-cust-link-del-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.ndm-cust-link-del-btn svg,
+.ndm-cust-link-del-btn .svg-icon {
+  width: 13px;
+  height: 13px;
+}

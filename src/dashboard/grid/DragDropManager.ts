@@ -40,24 +40,28 @@ export class DragDropManager {
 		settings: DashboardSettings,
 		saveQuiet: () => Promise<void>
 	): void {
+		let dragSrcId: string | null = null;
+
 		card.addEventListener('dragstart', (e) => {
+			dragSrcId = itemId;
 			card.addClass('dash-dragging');
 			e.dataTransfer?.setData('text/plain', itemId);
 		});
 		card.addEventListener('dragend', () => {
+			dragSrcId = null;
 			card.removeClass('dash-dragging');
-			activeDocument.querySelectorAll('.dash-drag-over').forEach(el => el.removeClass('dash-drag-over'));
+			(card.ownerDocument || document).querySelectorAll('.dash-drag-over').forEach(el => el.removeClass('dash-drag-over'));
 		});
 		card.addEventListener('dragover', (e) => {
 			e.preventDefault();
-			const srcId = e.dataTransfer?.getData('text/plain');
+			const srcId = e.dataTransfer?.getData('text/plain') || dragSrcId;
 			if (srcId && srcId !== itemId) card.addClass('dash-drag-over');
 		});
 		card.addEventListener('dragleave', () => card.removeClass('dash-drag-over'));
 		card.addEventListener('drop', (e) => {
 			e.preventDefault();
 			card.removeClass('dash-drag-over');
-			const srcId = e.dataTransfer?.getData('text/plain');
+			const srcId = e.dataTransfer?.getData('text/plain') || dragSrcId;
 			if (!srcId || srcId === itemId) return;
 
 			const layout2 = settings.overviewLayout;
@@ -72,7 +76,7 @@ export class DragDropManager {
 			void saveQuiet().then(() => {
 				const grid = card.parentElement;
 				if (grid) {
-					const draggedEl = grid.querySelector(`[data-widget-id="${srcId}"]`) as HTMLElement;
+					const draggedEl = grid.querySelector(`[data-widget-id="${CSS.escape(srcId)}"]`) as HTMLElement;
 					if (draggedEl) {
 						if (fromIdx < toIdx) {
 							card.after(draggedEl);
@@ -81,7 +85,7 @@ export class DragDropManager {
 						}
 					}
 				}
-			});
+			}).catch(err => console.error('[ActivityDashboard] Save failed:', err));
 		});
 	}
 
@@ -103,18 +107,18 @@ export class DragDropManager {
 		card.addEventListener('dragend', () => {
 			dragSrcId = null;
 			card.removeClass('dash-dragging');
-			activeDocument.querySelectorAll('.dash-drag-over').forEach(el => el.removeClass('dash-drag-over'));
+			(card.ownerDocument || document).querySelectorAll('.dash-drag-over').forEach(el => el.removeClass('dash-drag-over'));
 		});
 		card.addEventListener('dragover', (e) => {
 			e.preventDefault();
-			const srcId = e.dataTransfer?.getData('text/plain') ?? dragSrcId;
+			const srcId = e.dataTransfer?.getData('text/plain') || dragSrcId;
 			if (srcId && srcId !== widgetId) card.addClass('dash-drag-over');
 		});
 		card.addEventListener('dragleave', () => card.removeClass('dash-drag-over'));
 		card.addEventListener('drop', (e) => {
 			e.preventDefault();
 			card.removeClass('dash-drag-over');
-			const srcId = e.dataTransfer?.getData('text/plain');
+			const srcId = e.dataTransfer?.getData('text/plain') || dragSrcId;
 			if (!srcId || srcId === widgetId) return;
 
 			const activeWidgets = activeMode === 'library' ? (col.libraryWidgets || []) : (col.yearWidgets || []);
@@ -135,7 +139,7 @@ export class DragDropManager {
 			void saveQuiet().then(() => {
 				const grid = card.parentElement;
 				if (grid) {
-					const draggedEl = grid.querySelector(`[data-widget-id="${srcId}"]`) as HTMLElement;
+					const draggedEl = grid.querySelector(`[data-widget-id="${CSS.escape(srcId)}"]`) as HTMLElement;
 					if (draggedEl) {
 						if (fromIdx < toIdx) {
 							card.after(draggedEl);
@@ -144,7 +148,7 @@ export class DragDropManager {
 						}
 					}
 				}
-			});
+			}).catch(err => console.error('[ActivityDashboard] Save failed:', err));
 		});
 	}
 }

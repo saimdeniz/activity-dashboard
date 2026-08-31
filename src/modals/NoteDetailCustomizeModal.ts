@@ -1,5 +1,5 @@
-import { Modal, App, setIcon, Notice } from 'obsidian';
-import type { CollectionConfig } from '../types';
+﻿import { Modal, App, setIcon, Notice } from 'obsidian';
+import type { CollectionConfig, CustomLinkConfig } from '../types';
 import { getAdaptiveForeground, hexToRgbString, getContrastTextColor } from '../utils/ColorUtils';
 
 export class NoteDetailCustomizeModal extends Modal {
@@ -8,6 +8,7 @@ export class NoteDetailCustomizeModal extends Modal {
 	private statusOptionsText: string;
 	private selectedLinksPosition: 'cover' | 'topbar';
 	private selectedRatingScale: 'auto' | '5' | '10' | '100' | 'none';
+	private customLinks: CustomLinkConfig[];
 
 	constructor(
 		app: App,
@@ -22,6 +23,7 @@ export class NoteDetailCustomizeModal extends Modal {
 		this.statusOptionsText = cfg.statusOptions ? cfg.statusOptions.join(', ') : '';
 		this.selectedLinksPosition = cfg.linksPosition ?? 'cover';
 		this.selectedRatingScale = (cfg.ratingScale as 'auto' | '5' | '10' | '100' | 'none') ?? 'auto';
+		this.customLinks = cfg.customLinks ? JSON.parse(JSON.stringify(cfg.customLinks)) : [];
 	}
 
 	onOpen(): void {
@@ -33,7 +35,7 @@ export class NoteDetailCustomizeModal extends Modal {
 		contentEl.addClass('dash-note-customize-modal');
 
 		const baseColor = this.col.color || '#818cf8';
-		const isDark = !document.body.classList.contains('theme-light');
+		const isDark = !(typeof activeDocument !== 'undefined' && activeDocument.body ? activeDocument.body : document.body).classList.contains('theme-light');
 		const colFg = getAdaptiveForeground(baseColor, isDark);
 		const colRgb = hexToRgbString(colFg);
 		const colContrast = getContrastTextColor(colFg);
@@ -53,7 +55,7 @@ export class NoteDetailCustomizeModal extends Modal {
 		headerLeft.createEl('h2', { text: `Customize "${this.col.name}" Detail View`, cls: 'ndm-cust-title' });
 
 		const headerDesc = contentEl.createDiv('ndm-cust-desc');
-		headerDesc.setText('Configure status buttons, highlights, and external link positions.');
+		headerDesc.setText('Configure status buttons, highlights, external link titles/icons, and rating.');
 
 		// ── Body ──────────────────────────────────────────────────
 		const body = contentEl.createDiv('ndm-cust-body');
@@ -65,7 +67,7 @@ export class NoteDetailCustomizeModal extends Modal {
 		sec1Header.createSpan({ text: 'Quick Status Buttons' });
 
 		sec1.createDiv({
-			text: 'Frontmatter property for toggle buttons (e.g. ownership, readStatus).',
+			text: 'Frontmatter property for toggle buttons (e.g. ownership, readStatus, status).',
 			cls: 'ndm-cust-sec-desc'
 		});
 
@@ -81,7 +83,7 @@ export class NoteDetailCustomizeModal extends Modal {
 		else if (this.selectedStatusField) initialLabel = this.selectedStatusField;
 
 		const dropLabel = dropBtn.createSpan({ text: initialLabel, cls: 'dash-custom-dropdown-label' });
-		const dropArrow = dropBtn.createSpan({ cls: 'dash-custom-dropdown-arrow' });
+		const dropArrow = dropBtn.createSpan('dash-custom-dropdown-arrow');
 		setIcon(dropArrow, 'chevron-down');
 		const dropList = dropWrap.createDiv('dash-custom-dropdown-list hidden');
 
@@ -93,75 +95,79 @@ export class NoteDetailCustomizeModal extends Modal {
 
 		const optionsRow = sec1.createDiv('ndm-cust-input-row');
 		const optionsLabelRow = optionsRow.createDiv('ndm-cust-counter-row');
-		optionsLabelRow.createSpan({ text: 'Buttons:', cls: 'ndm-cust-label' });
+		optionsLabelRow.createSpan({ text: 'Buttons (comma-separated):', cls: 'ndm-cust-label' });
 		
 		const clearButtonsBtn = optionsLabelRow.createEl('button', { cls: 'ndm-cust-reset-btn', text: 'Clear' });
 
 		const optionsInput = optionsRow.createEl('input', {
 			cls: 'ndm-cust-text-input',
+			placeholder: 'e.g. Owned, Wishlist, Played, Backlog',
 			value: this.statusOptionsText,
-			attr: { placeholder: 'e.g. Owned, Wishlist, Delisted, Emulator, Subscription' }
 		});
-		optionsInput.oninput = () => {
-			this.statusOptionsText = optionsInput.value;
-		};
 
 		clearButtonsBtn.onclick = () => {
 			this.statusOptionsText = '';
 			optionsInput.value = '';
 		};
 
-		if (this.selectedStatusField === '__none__') {
-			optionsRow.hide();
-		}
+		optionsInput.oninput = () => {
+			this.statusOptionsText = optionsInput.value;
+		};
 
-		const updateOptionsInput = (fieldKey: string) => {
-			if (!fieldKey || fieldKey === '__none__') {
+		const updateOptionsInput = (propKey: string) => {
+			if (propKey === '__none__') {
+				optionsRow.addClass('hidden');
 				this.statusOptionsText = '';
 				optionsInput.value = '';
-				if (fieldKey === '__none__') optionsRow.hide();
-				else optionsRow.show();
+				return;
+			}
+			optionsRow.removeClass('hidden');
+
+			if (!propKey) {
+				const defaultField = this.col.schema.find(f => /status|ownership|state|readstatus|condition|stage|priority/i.test(f.key));
+				if (defaultField && defaultField.sampleValues?.length) {
+					const allSamples = defaultField.sampleValues.flatMap(val => 
+						val.includes(',') || val.includes('|') ? val.split(/[,|]/).map(s => s.trim()) : [val.trim()]
+					).filter(Boolean);
+					const uniqueSamples = Array.from(new Set(allSamples));
+					this.statusOptionsText = uniqueSamples.join(', ');
+					optionsInput.value = this.statusOptionsText;
+				} else {
+					this.statusOptionsText = '';
+					optionsInput.value = '';
+				}
 				return;
 			}
 
-			optionsRow.show();
-			const found = this.col.schema.find(s => s.key.toLowerCase() === fieldKey.toLowerCase());
-			let newOptions: string[] = [];
-
-			if (found && found.sampleValues && found.sampleValues.length > 0) {
-				const rawList: string[] = [];
-				found.sampleValues.forEach(sv => {
-					if (typeof sv === 'string' && (sv.includes(',') || sv.includes('|'))) {
-						rawList.push(...sv.split(/[,|]/).map(p => p.trim()).filter(Boolean));
-					} else if (sv && String(sv).trim().length > 0) {
-						rawList.push(String(sv).trim());
-					}
-				});
-				newOptions = Array.from(new Set(rawList));
+			const f = this.col.schema.find(sf => sf.key === propKey);
+			if (f && f.sampleValues && f.sampleValues.length > 0) {
+				const allSamples = f.sampleValues.flatMap(val => 
+					val.includes(',') || val.includes('|') ? val.split(/[,|]/).map(s => s.trim()) : [val.trim()]
+				).filter(Boolean);
+				const uniqueSamples = Array.from(new Set(allSamples));
+				this.statusOptionsText = uniqueSamples.join(', ');
+				optionsInput.value = this.statusOptionsText;
 			} else {
-				if (/read/i.test(fieldKey)) newOptions = ['Read', 'Reading', 'Want to Read', 'DNF'];
-				else if (/play/i.test(fieldKey)) newOptions = ['Playing', 'Completed', 'Backlog', 'Abandoned'];
-				else if (/owner/i.test(fieldKey)) newOptions = ['Owned', 'Wishlist', 'Delisted', 'Emulator', 'Subscription'];
-				else if (/prior/i.test(fieldKey)) newOptions = ['High', 'Medium', 'Low'];
+				this.statusOptionsText = '';
+				optionsInput.value = '';
 			}
-
-			this.statusOptionsText = newOptions.join(', ');
-			optionsInput.value = this.statusOptionsText;
 		};
 
+		if (this.selectedStatusField === '__none__') {
+			optionsRow.addClass('hidden');
+		}
+
 		statusFieldOptions.forEach(opt => {
-			const item = dropList.createDiv({
-				cls: `dash-custom-dropdown-item ${this.selectedStatusField === opt.value ? 'active' : ''}`
-			});
+			const item = dropList.createDiv(`dash-custom-dropdown-item ${this.selectedStatusField === opt.value ? 'active' : ''}`);
 			item.setText(opt.label);
 			item.onclick = (e) => {
 				e.stopPropagation();
 				this.selectedStatusField = opt.value;
 				dropLabel.setText(opt.label);
-				dropList.querySelectorAll('.dash-custom-dropdown-item').forEach(i => i.removeClass('active'));
-				item.addClass('active');
 				dropList.addClass('hidden');
 				dropBtn.removeClass('open');
+				dropList.querySelectorAll('.dash-custom-dropdown-item').forEach(el => el.removeClass('active'));
+				item.addClass('active');
 				updateOptionsInput(opt.value);
 			};
 		});
@@ -169,29 +175,35 @@ export class NoteDetailCustomizeModal extends Modal {
 		dropBtn.onclick = (e) => {
 			e.stopPropagation();
 			const isOpen = !dropList.hasClass('hidden');
-			dropList.toggleClass('hidden', isOpen);
-			dropBtn.toggleClass('open', !isOpen);
+			if (isOpen) {
+				dropList.addClass('hidden');
+				dropBtn.removeClass('open');
+			} else {
+				dropList.removeClass('hidden');
+				dropBtn.addClass('open');
+			}
 		};
 
-		activeDocument.addEventListener('click', () => {
-			dropList.addClass('hidden');
-			dropBtn.removeClass('open');
-		}, { once: true });
-
-		// ── Section 2: Key Highlights (Max 8) ─────────────────────
+		// ── Section 2: Highlights Grid ────────────────────────────
 		const sec2 = body.createDiv('ndm-cust-section');
 		const sec2Header = sec2.createDiv('ndm-cust-sec-title');
-		setIcon(sec2Header.createSpan('ndm-cust-sec-icon'), 'bookmark');
-		sec2Header.createSpan({ text: 'Highlights Grid Properties' });
+		setIcon(sec2Header.createSpan('ndm-cust-sec-icon'), 'layout-grid');
+		sec2Header.createSpan({ text: 'Highlights Card Grid' });
 
-		const counterWrap = sec2.createDiv('ndm-cust-counter-row');
-		const counterText = counterWrap.createSpan({
-			text: `${this.selectedHighlights.length} / 8 properties selected`,
-			cls: `ndm-cust-counter ${this.selectedHighlights.length === 8 ? 'max' : ''}`
+		sec2.createDiv({
+			text: 'Select up to 8 key properties to display prominently in the top highlights card.',
+			cls: 'ndm-cust-sec-desc'
 		});
 
-		const resetBtn = counterWrap.createEl('button', { cls: 'ndm-cust-reset-btn', text: 'Reset to Auto' });
-		resetBtn.onclick = () => {
+		const counterRow = sec2.createDiv('ndm-cust-counter-row');
+		const counterText = counterRow.createSpan('ndm-cust-counter');
+		
+		const autoDetectBtn = counterRow.createEl('button', {
+			cls: 'ndm-cust-reset-btn',
+			text: 'Reset to Auto-Detect'
+		});
+
+		autoDetectBtn.onclick = () => {
 			this.selectedHighlights = [];
 			updateChips();
 		};
@@ -241,14 +253,14 @@ export class NoteDetailCustomizeModal extends Modal {
 
 		updateChips();
 
-		// ── Section 3: External Web Links Position ────────────────
+		// ── Section 3: External Web Links & Custom Titles ─────────
 		const sec3 = body.createDiv('ndm-cust-section');
 		const sec3Header = sec3.createDiv('ndm-cust-sec-title');
 		setIcon(sec3Header.createSpan('ndm-cust-sec-icon'), 'link');
-		sec3Header.createSpan({ text: 'External Links' });
+		sec3Header.createSpan({ text: 'External Links & Custom Titles' });
 
 		sec3.createDiv({
-			text: 'Display position for external database/store links.',
+			text: 'Customize link positions and rename generic URL properties with friendly titles and icons.',
 			cls: 'ndm-cust-sec-desc'
 		});
 
@@ -295,6 +307,82 @@ export class NoteDetailCustomizeModal extends Modal {
 				linkDropBtn.addClass('open');
 			}
 		};
+
+		// ── Custom Link Mappings Builder ──
+		const customLinksWrap = sec3.createDiv('ndm-cust-links-builder');
+		const customLinksHeader = customLinksWrap.createDiv('ndm-cust-links-header');
+		customLinksHeader.createSpan({ text: 'Custom Link Titles & Icons:', cls: 'ndm-cust-label' });
+		
+		const addLinkBtn = customLinksHeader.createEl('button', {
+			cls: 'ndm-cust-add-link-btn',
+			text: '+ Add Custom Link'
+		});
+
+		const linksListContainer = customLinksWrap.createDiv('ndm-cust-links-list');
+
+		const renderCustomLinksList = () => {
+			linksListContainer.empty();
+			if (this.customLinks.length === 0) {
+				const emptyHint = linksListContainer.createDiv('ndm-cust-empty-links-hint');
+				emptyHint.setText('No custom link mappings yet. URLs will use automatic platform detection.');
+				return;
+			}
+
+			this.customLinks.forEach((cl, index) => {
+				const row = linksListContainer.createDiv('ndm-cust-link-row');
+
+				// 1. Property Name input
+				const keyWrap = row.createDiv('ndm-cust-link-field-wrap');
+				const keyInput = keyWrap.createEl('input', {
+					cls: 'ndm-cust-link-input',
+					placeholder: 'Property (e.g. datasource)',
+					value: cl.fieldKey || ''
+				});
+				keyInput.oninput = () => {
+					cl.fieldKey = keyInput.value.trim();
+				};
+
+				// 2. Display Title input
+				const labelWrap = row.createDiv('ndm-cust-link-field-wrap');
+				const labelInput = labelWrap.createEl('input', {
+					cls: 'ndm-cust-link-input',
+					placeholder: 'Display Title (e.g. League of Comic Geeks)',
+					value: cl.label || ''
+				});
+				labelInput.oninput = () => {
+					cl.label = labelInput.value;
+				};
+
+				// 3. Icon input
+				const iconWrap = row.createDiv('ndm-cust-link-icon-wrap');
+				const iconInput = iconWrap.createEl('input', {
+					cls: 'ndm-cust-link-input ndm-cust-link-icon-input',
+					placeholder: 'Icon (e.g. book-open)',
+					value: cl.icon || 'external-link'
+				});
+				iconInput.oninput = () => {
+					cl.icon = iconInput.value.trim() || 'external-link';
+				};
+
+				// 4. Delete button
+				const delBtn = row.createEl('button', {
+					cls: 'ndm-cust-link-del-btn',
+					attr: { title: 'Remove Mapping', 'aria-label': 'Remove' }
+				});
+				setIcon(delBtn, 'trash-2');
+				delBtn.onclick = () => {
+					this.customLinks.splice(index, 1);
+					renderCustomLinksList();
+				};
+			});
+		};
+
+		addLinkBtn.onclick = () => {
+			this.customLinks.push({ fieldKey: '', label: '', icon: 'external-link' });
+			renderCustomLinksList();
+		};
+
+		renderCustomLinksList();
 
 		// ── Section 4: Rating Scale ───────────────────────────────
 		const sec4 = body.createDiv('ndm-cust-section');
@@ -387,6 +475,13 @@ export class NoteDetailCustomizeModal extends Modal {
 			cfg.highlightFields = this.selectedHighlights.length > 0 ? this.selectedHighlights : undefined;
 			cfg.linksPosition = this.selectedLinksPosition;
 			cfg.ratingScale = this.selectedRatingScale;
+			cfg.customLinks = this.customLinks
+				.filter(cl => cl.fieldKey && cl.fieldKey.trim() && cl.label && cl.label.trim())
+				.map(cl => ({
+					fieldKey: cl.fieldKey.trim(),
+					label: cl.label.trim(),
+					icon: cl.icon ? cl.icon.trim() : 'external-link'
+				}));
 
 			try {
 				await this.onSave();

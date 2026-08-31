@@ -109,11 +109,11 @@ export class DrilldownConfigPanel {
 			imgDropBtn.toggleClass('open', !isOpen);
 		};
 
-		// Close when clicking outside
+		// Close when clicking outside — use once:true to prevent accumulating listeners on repeated build() calls
 		activeDocument.addEventListener('click', () => {
 			imgDropList.addClass('hidden');
 			imgDropBtn.removeClass('open');
-		}, { once: false });
+		}, { once: true });
 
 		// Image Fit
 		const imageFitSection = imgSection.createDiv('dash-config-section');

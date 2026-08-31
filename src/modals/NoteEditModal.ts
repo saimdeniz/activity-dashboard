@@ -14,6 +14,7 @@ interface PropertyFieldItem {
 
 export class NoteEditModal extends Modal {
 	private properties: PropertyFieldItem[] = [];
+	private activeTypeMenuCleanups: (() => void)[] = [];
 	private pinnedKeys: Set<string> = new Set();
 
 	constructor(
@@ -214,7 +215,7 @@ export class NoteEditModal extends Modal {
 		const generalSec = body.createDiv('dash-note-section');
 		const secHeader = generalSec.createDiv('dash-note-sec-header');
 		setIcon(secHeader.createSpan('dash-note-sec-icon'), this.col.icon || 'layers');
-		secHeader.createSpan({ text: 'GAMEPLAY & METADATA', cls: 'dash-note-sec-title' });
+		secHeader.createSpan({ text: `${this.col.name.toUpperCase()} PROPERTIES`, cls: 'dash-note-sec-title' });
 
 		generalProps.forEach((prop, idx) => this.renderPropertyRow(generalSec, prop, idx, body, false));
 
@@ -363,13 +364,20 @@ export class NoteEditModal extends Modal {
 			};
 		});
 
+		const doc = this.containerEl.ownerDocument || document;
 		const closeMenu = (e: MouseEvent) => {
 			if (!menu.contains(e.target as Node)) {
 				menu.remove();
-				activeDocument.removeEventListener('click', closeMenu);
+				doc.removeEventListener('click', closeMenu);
+				this.activeTypeMenuCleanups = this.activeTypeMenuCleanups.filter(fn => fn !== cleanup);
 			}
 		};
-		window.setTimeout(() => activeDocument.addEventListener('click', closeMenu), 0);
+		const cleanup = () => {
+			menu.remove();
+			doc.removeEventListener('click', closeMenu);
+		};
+		this.activeTypeMenuCleanups.push(cleanup);
+		window.setTimeout(() => doc.addEventListener('click', closeMenu), 0);
 	}
 
 	private renderFieldControl(container: HTMLElement, prop: PropertyFieldItem): void {
@@ -456,19 +464,20 @@ export class NoteEditModal extends Modal {
 	}
 
 	private renderCheckboxControl(container: HTMLElement, prop: PropertyFieldItem): void {
-		const boolVal = prop.value === true;
+		const initialVal = prop.value === true;
 		const toggle = container.createEl('button', {
-			cls: `dash-note-toggle-btn ${boolVal ? 'active' : ''}`,
+			cls: `dash-note-toggle-btn ${initialVal ? 'active' : ''}`,
 			attr: { title: 'Toggle boolean status' }
 		});
 		toggle.createSpan('dash-note-toggle-dot');
-		toggle.createSpan({ text: boolVal ? 'True' : 'False', cls: 'dash-note-toggle-text' });
+		const toggleText = toggle.createSpan({ text: initialVal ? 'True' : 'False', cls: 'dash-note-toggle-text' });
 
 		toggle.onclick = () => {
-			const next = !boolVal;
+			// Read live prop.value — not the frozen initial snapshot
+			const next = !(prop.value === true);
 			prop.value = next;
 			toggle.toggleClass('active', next);
-			toggle.querySelector('.dash-note-toggle-text')!.textContent = next ? 'True' : 'False';
+			toggleText.textContent = next ? 'True' : 'False';
 		};
 	}
 
@@ -497,18 +506,20 @@ export class NoteEditModal extends Modal {
 
 	private renderRatingControl(container: HTMLElement, prop: PropertyFieldItem): void {
 		const wrap = container.createDiv('dash-note-rating-wrap');
-		const rawNum = typeof prop.value === 'number' ? prop.value : parseFloat(String(prop.value)) || 0;
-		const maxStars = rawNum > 5 && rawNum <= 10 ? 10 : 5;
+		const initialNum = typeof prop.value === 'number' ? prop.value : parseFloat(String(prop.value)) || 0;
+		const maxStars = initialNum > 5 && initialNum <= 10 ? 10 : 5;
 
 		const starBar = wrap.createDiv('dash-note-star-bar');
 		for (let i = 1; i <= maxStars; i++) {
 			const star = starBar.createSpan({
-				cls: `dash-note-star-btn ${i <= Math.round(rawNum) ? 'active' : ''}`,
+				cls: `dash-note-star-btn ${i <= Math.round(initialNum) ? 'active' : ''}`,
 				text: '★',
 				attr: { 'aria-label': `${i} / ${maxStars}` }
 			});
 			star.onclick = () => {
-				const nextVal = rawNum === i ? 0 : i;
+				// Read live prop.value — not the frozen initial snapshot — so deselect works
+				const currentNum = typeof prop.value === 'number' ? prop.value : parseFloat(String(prop.value)) || 0;
+				const nextVal = currentNum === i ? 0 : i;
 				prop.value = nextVal;
 				starBar.querySelectorAll('.dash-note-star-btn').forEach((s, idx) => {
 					if (idx < nextVal) s.addClass('active');
@@ -525,7 +536,8 @@ export class NoteEditModal extends Modal {
 		});
 		input.oninput = () => {
 			const parsed = parseFloat(input.value);
-			prop.value = isNaN(parsed) ? input.value : parsed;
+			// Store empty string (not raw string) on invalid parse so frontmatter stays numeric
+			prop.value = isNaN(parsed) ? '' : parsed;
 			starBar.querySelectorAll('.dash-note-star-btn').forEach((s, idx) => {
 				if (idx < Math.round(parsed || 0)) s.addClass('active');
 				else s.removeClass('active');
@@ -541,7 +553,8 @@ export class NoteEditModal extends Modal {
 		});
 		input.oninput = () => {
 			const n = parseFloat(input.value);
-			prop.value = isNaN(n) ? input.value : n;
+			// Store empty string (not raw string) on invalid parse so frontmatter stays numeric
+			prop.value = isNaN(n) ? '' : n;
 		};
 	}
 
@@ -608,6 +621,8 @@ export class NoteEditModal extends Modal {
 	}
 
 	onClose(): void {
+		this.activeTypeMenuCleanups.forEach(fn => fn());
+		this.activeTypeMenuCleanups = [];
 		this.contentEl.empty();
 	}
 }

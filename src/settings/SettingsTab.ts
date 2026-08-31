@@ -2,6 +2,7 @@ import { App, PluginSettingTab, Setting, Notice, setIcon } from 'obsidian';
 import type { CollectionConfig, DashboardSettings } from '../types';
 import { COLLECTION_COLORS } from '../types';
 import { SchemaScanner } from '../core/SchemaScanner';
+import { migrateSettings } from '../core/Migration';
 import { FolderSuggest } from '../utils/FolderSuggest';
 import { NoteDetailCustomizeModal } from '../modals/NoteDetailCustomizeModal';
 import type LibraryDashPlugin from '../main';
@@ -214,7 +215,8 @@ export class DashboardSettingTab extends PluginSettingTab {
 							const text = await navigator.clipboard.readText();
 							const parsed = JSON.parse(text) as unknown;
 							validateSettings(parsed);
-							this.plugin.settings = { ...DEFAULT_SETTINGS, ...(parsed as Partial<DashboardSettings>) };
+							const migrated = migrateSettings(parsed as Record<string, unknown>);
+							this.plugin.settings = { ...DEFAULT_SETTINGS, ...migrated };
 							await this.plugin.saveSettings();
 							new Notice('Settings imported from clipboard successfully! Reloading...');
 							this.display();
@@ -240,7 +242,8 @@ export class DashboardSettingTab extends PluginSettingTab {
 									const content = evt.target?.result as string;
 									const parsed = JSON.parse(content) as unknown;
 									validateSettings(parsed);
-									this.plugin.settings = { ...DEFAULT_SETTINGS, ...(parsed as Partial<DashboardSettings>) };
+									const migrated = migrateSettings(parsed as Record<string, unknown>);
+									this.plugin.settings = { ...DEFAULT_SETTINGS, ...migrated };
 									await this.plugin.saveSettings();
 									new Notice('Settings imported successfully! Reloading...');
 									this.display();
@@ -340,6 +343,9 @@ export class DashboardSettingTab extends PluginSettingTab {
 			e.stopPropagation();
 			this.plugin.settings.collections = this.plugin.settings.collections.filter(c => c.id !== col.id);
 			this.plugin.settings.overviewPins = this.plugin.settings.overviewPins.filter(p => p.collectionId !== col.id);
+			if (this.plugin.settings.overviewLayout) {
+				this.plugin.settings.overviewLayout = this.plugin.settings.overviewLayout.filter(item => item.collectionId !== col.id);
+			}
 			if (this.expandedId === col.id) this.expandedId = null;
 			await this.plugin.saveSettings();
 			this.display();
@@ -357,7 +363,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 				col.name = v.trim() || 'Untitled';
 				await this.plugin.saveSettings();
 				// Update header live
-				meta.querySelector('.dash-settings-item-name')!.textContent = col.name;
+				meta.querySelector('.dash-settings-item-name')?.setText(col.name);
 			}));
 
 		// ── Icon Picker ───────────────────────────────────────────────────────
@@ -602,6 +608,13 @@ export class DashboardSettingTab extends PluginSettingTab {
 			libraryWidgets: [],
 		};
 	}
+
+	override hide(): void {
+		// Clean up all document-level dropdown click listeners to prevent memory leaks
+		this.closeDropdowns.forEach(fn => fn());
+		this.closeDropdowns = [];
+		super.hide();
+	}
 }
 
 function uid(): string {
@@ -672,3 +685,4 @@ function validateSettings(parsed: unknown): void {
 		}
 	}
 }
+

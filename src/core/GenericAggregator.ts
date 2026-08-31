@@ -192,8 +192,8 @@ export class GenericAggregator {
 		if (sortedKeys.length > 0) {
 			for (const key of sortedKeys) {
 				const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-				// Match the key only if it is not part of a larger alphanumeric identifier
-				const regex = new RegExp(`(?<![a-zA-Z0-9_])${escapedKey}(?![a-zA-Z0-9_])`, 'g');
+				// Match the key only if it is not preceded by Math. and not part of a larger alphanumeric identifier
+				const regex = new RegExp(`(?<!Math\\.)(?<![a-zA-Z0-9_])${escapedKey}(?![a-zA-Z0-9_])`, 'g');
 				substituted = substituted.replace(regex, String(numericFields[key]));
 			}
 		}

@@ -45,6 +45,8 @@ export function renderHeatmapWidget(params: {
 		const pastOrCurrent = availableYears.filter(y => y <= currentYear);
 		if (pastOrCurrent.length > 0) {
 			activeHeatmapYear = pastOrCurrent[0]; // latest past year
+		} else if (availableYears.length > 0) {
+			activeHeatmapYear = availableYears[0];
 		} else {
 			activeHeatmapYear = currentYear;
 		}
@@ -99,16 +101,19 @@ export function renderHeatmapWidget(params: {
 			};
 		}
 
-		// Compute base colors based on collectionColor
+		// Compute base colors based on collectionColor and theme mode
 		const hsl = hexToHsl(collectionColor) || { h: 240, s: 70, l: 60 };
 		const h = hsl.h;
 		const s = hsl.s;
+		const isDark = !(typeof activeDocument !== 'undefined' && activeDocument.body ? activeDocument.body : document.body).classList.contains('theme-light');
 
 		// 5 levels of color (Level 0 = empty track background)
-		const colorL1 = `hsl(${h}, ${Math.max(30, s - 10)}%, 75%)`;
-		const colorL2 = `hsl(${h}, ${Math.max(40, s)}%, 60%)`;
-		const colorL3 = `hsl(${h}, ${Math.max(50, s + 10)}%, 48%)`;
-		const colorL4 = `hsl(${h}, ${Math.max(60, s + 20)}%, 36%)`;
+		// In dark mode: higher activity is brighter/more saturated
+		// In light mode: higher activity is darker/more saturated
+		const colorL1 = isDark ? `hsl(${h}, ${Math.max(25, s - 15)}%, 28%)` : `hsl(${h}, ${Math.max(30, s - 10)}%, 78%)`;
+		const colorL2 = isDark ? `hsl(${h}, ${Math.max(35, s - 5)}%, 42%)` : `hsl(${h}, ${Math.max(40, s)}%, 62%)`;
+		const colorL3 = isDark ? `hsl(${h}, ${Math.max(45, s + 5)}%, 58%)` : `hsl(${h}, ${Math.max(50, s + 10)}%, 48%)`;
+		const colorL4 = isDark ? `hsl(${h}, ${Math.max(55, s + 15)}%, 74%)` : `hsl(${h}, ${Math.max(60, s + 20)}%, 34%)`;
 
 		const getCellColor = (val: number, max: number): string => {
 			if (val <= 0 || max <= 0) return 'var(--dash-heatmap-empty, var(--background-modifier-border-focus, rgba(255,255,255,0.06)))';
@@ -149,7 +154,7 @@ export function renderHeatmapWidget(params: {
 		let weekIdx = 0;
 		const monthPositions: { month: number; weekIdx: number }[] = [];
 
-		while (currentDate <= endDate || currentDate.getUTCDay() !== 1) {
+		while (currentDate <= endDate) {
 			const weekCol = gridColumns.createDiv('dash-heatmap-week-col');
 
 			for (let dayIdx = 0; dayIdx < 7; dayIdx++) {

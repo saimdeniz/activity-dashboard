@@ -12,8 +12,6 @@ export function renderNumberCardWidget(params: {
 	el: HTMLElement;
 	records: RawRecord[];
 	config: WidgetConfig;
-	charts?: Chart[];
-	cssVar?: (v: string) => string;
 	onDrilldown?: (filterValue: string | null) => void;
 }): void {
 	const { el, records, config, onDrilldown } = params;
@@ -30,7 +28,7 @@ export function renderNumberCardWidget(params: {
 		case 'average': value = summary.average; break;
 		case 'min':     value = summary.min;     break;
 		case 'max':     value = summary.max;     break;
-		default:        value = summary.count;
+		default:        value = (!config.field || !config.field.trim()) ? records.length : summary.count;
 	}
 
 	const aggLabel: Record<string, string> = {

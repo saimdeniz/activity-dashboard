@@ -91,10 +91,10 @@ export function renderActivityWidget(params: {
 		if (config.legendPosition === 'hidden') displayLegend = false;
 		else if (config.legendPosition) displayLegend = true;
 
-		const bgColors = generatePalette(color, labels.length, colorTheme).map(c => {
-			return (isBar || isLineOrRadar) ? c.replace('hsl(', 'hsla(').replace(')', ', 0.8)') : c;
-		});
-		const borderColors = isLineOrRadar ? color : 'transparent';
+		const palette = generatePalette(color, labels.length, colorTheme);
+		const bgColors = (isBar || isLineOrRadar) ? palette.map(c => c.startsWith('#') ? c + 'cc' : c) : palette;
+		const lineColor = color.startsWith('#') ? color : '#818cf8';
+		const borderColors = isLineOrRadar ? lineColor : 'transparent';
 
 		chart = new Chart(canvas, {
 			type: isBar ? 'bar' : (chartType as 'line' | 'bar' | 'pie' | 'doughnut' | 'radar'),
@@ -103,7 +103,7 @@ export function renderActivityWidget(params: {
 				datasets: [{
 					label: config.title,
 					data: values,
-					backgroundColor: isLineOrRadar ? (color + '33') : bgColors,
+					backgroundColor: isLineOrRadar ? (lineColor + '33') : bgColors,
 					borderColor: borderColors,
 					borderWidth: isLineOrRadar ? 2 : 0,
 					borderRadius: isBar ? 3 : 0,
