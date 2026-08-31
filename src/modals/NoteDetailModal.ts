@@ -462,7 +462,7 @@ export class NoteDetailModal extends Modal {
 				if (typeof v === 'boolean') {
 					valEl.createSpan({ text: v ? 'true' : 'false', cls: `ndm-bool ${v ? 'ndm-bool-true' : 'ndm-bool-false'}` });
 				} else if (typeof v === 'string' && /^https?:\/\//i.test(v)) {
-					const a = valEl.createEl('a', { text: v, cls: 'ndm-link', attr: { href: v, target: '_blank', rel: 'noopener noreferrer' } });
+					valEl.createEl('a', { text: v, cls: 'ndm-link', attr: { href: v, target: '_blank', rel: 'noopener noreferrer' } });
 				} else {
 					valEl.createSpan({ text: String(v) });
 				}

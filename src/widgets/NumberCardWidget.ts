@@ -1,5 +1,4 @@
 import { setIcon } from 'obsidian';
-import type { Chart } from 'chart.js';
 import type { RawRecord, WidgetConfig } from '../types';
 import { GenericAggregator } from '../core/GenericAggregator';
 import { formatValue } from '../utils/ChartUtils';

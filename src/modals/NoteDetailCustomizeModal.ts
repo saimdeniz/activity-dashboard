@@ -1,4 +1,4 @@
-﻿import { Modal, App, setIcon, Notice } from 'obsidian';
+import { Modal, App, setIcon, Notice } from 'obsidian';
 import type { CollectionConfig, CustomLinkConfig } from '../types';
 import { getAdaptiveForeground, hexToRgbString, getContrastTextColor } from '../utils/ColorUtils';
 
@@ -23,7 +23,7 @@ export class NoteDetailCustomizeModal extends Modal {
 		this.statusOptionsText = cfg.statusOptions ? cfg.statusOptions.join(', ') : '';
 		this.selectedLinksPosition = cfg.linksPosition ?? 'cover';
 		this.selectedRatingScale = (cfg.ratingScale as 'auto' | '5' | '10' | '100' | 'none') ?? 'auto';
-		this.customLinks = cfg.customLinks ? JSON.parse(JSON.stringify(cfg.customLinks)) : [];
+		this.customLinks = cfg.customLinks ? cfg.customLinks.map(l => ({ ...l })) : [];
 	}
 
 	onOpen(): void {
