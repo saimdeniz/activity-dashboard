@@ -1,4 +1,4 @@
-import type { CollectionConfig, DashboardSettings, WidgetConfig } from '../types';
+import type { CollectionConfig, DashboardMode, DashboardSettings, WidgetConfig } from '../types';
 import { COLLECTION_COLORS } from '../types';
 
 const SCHEMA_VERSION = 3;
@@ -11,8 +11,8 @@ export function migrateSettings(loaded: Record<string, unknown> | null | undefin
 	const defaults: DashboardSettings = {
 		schemaVersion: SCHEMA_VERSION,
 		collections: [],
-		activeYear: new Date().getFullYear(),
-		activeMonth: new Date().getMonth() + 1,
+		activeYear: new Date().getUTCFullYear(),
+		activeMonth: new Date().getUTCMonth() + 1,
 		activeMode: 'year',
 		overviewPins: [],
 	};
@@ -114,12 +114,14 @@ export function migrateSettings(loaded: Record<string, unknown> | null | undefin
 		}
 	}
 
+	const isValidMode = (m: unknown): m is DashboardMode => m === 'library' || m === 'month' || m === 'year';
+
 	return {
 		...defaults,
 		collections,
-		activeYear: (loaded.activeYear as number | 'all-time') ?? defaults.activeYear,
-		activeMonth: (loaded.activeMonth as number) ?? defaults.activeMonth,
-		activeMode: (loaded.activeMode as any) ?? defaults.activeMode,
+		activeYear: (typeof loaded.activeYear === 'number' || loaded.activeYear === 'all-time') ? loaded.activeYear : defaults.activeYear,
+		activeMonth: typeof loaded.activeMonth === 'number' ? loaded.activeMonth : defaults.activeMonth,
+		activeMode: isValidMode(loaded.activeMode) ? loaded.activeMode : defaults.activeMode,
 	};
 }
 
