@@ -19,6 +19,9 @@ export function renderActivityWidget(params: {
 	cssVar: (v: string) => string;
 	collectionColor: string;
 	colorTheme?: 'classic' | 'pastel' | 'neon' | 'monochrome';
+	year?: number | 'all-time';
+	month?: number;
+	mode?: 'year' | 'library' | 'month';
 	onDrilldown?: (filterValue: string | null) => void;
 	onSave?: () => Promise<void>;
 }): void {

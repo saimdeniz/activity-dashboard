@@ -335,10 +335,14 @@ export class AddWidgetModal extends Modal {
 		let topN = e?.topN ?? 12;
 		const topNInput = lWrap.createEl('input', {
 			cls: 'dash-modal-input-styled',
-			type: 'text',
+			type: 'number',
 			value: String(topN),
+			attr: { min: '1', step: '1' },
 		});
-		topNInput.onchange = () => { topN = parseInt(topNInput.value) || 12; };
+		topNInput.oninput = () => {
+			const parsed = parseInt(topNInput.value, 10);
+			topN = (!isNaN(parsed) && parsed >= 1) ? parsed : 12;
+		};
 
 		const tWrap = inputsWrap.createDiv('dash-modal-input-group');
 		tWrap.createDiv({ text: 'Custom Title (Optional)', cls: 'dash-modal-input-label' });

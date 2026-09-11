@@ -11,6 +11,7 @@ export const DEFAULT_SETTINGS: DashboardSettings = {
 	schemaVersion: 3,
 	collections: [],
 	activeYear: new Date().getFullYear(),
+	activeMonth: new Date().getMonth() + 1,
 	activeMode: 'library',
 	overviewPins: [],
 	overviewMediaBreakdown: { size: { height: 'small', span: 6 }, chartType: 'doughnut' },
@@ -30,6 +31,22 @@ const ICON_PRESETS = [
 export class DashboardSettingTab extends PluginSettingTab {
 	private expandedId: string | null = null;
 	private closeDropdowns: (() => void)[] = [];
+	private saveTimeout: number | null = null;
+
+	private debouncedSave(immediate = false): void {
+		if (this.saveTimeout) {
+			window.clearTimeout(this.saveTimeout);
+			this.saveTimeout = null;
+		}
+		if (immediate) {
+			void this.plugin.saveSettings();
+			return;
+		}
+		this.saveTimeout = window.setTimeout(() => {
+			this.saveTimeout = null;
+			void this.plugin.saveSettings();
+		}, 400);
+	}
 
 	constructor(app: App, private plugin: LibraryDashPlugin) {
 		super(app, plugin);
@@ -359,12 +376,15 @@ export class DashboardSettingTab extends PluginSettingTab {
 		// ── Name ─────────────────────────────────────────────────────────────
 		new Setting(editor)
 			.setName('Collection Name')
-			.addText(t => t.setValue(col.name).onChange(async v => {
-				col.name = v.trim() || 'Untitled';
-				await this.plugin.saveSettings();
-				// Update header live
-				meta.querySelector('.dash-settings-item-name')?.setText(col.name);
-			}));
+			.addText(t => {
+				t.setValue(col.name).onChange(v => {
+					col.name = v.trim() || 'Untitled';
+					this.debouncedSave();
+					// Update header live
+					meta.querySelector('.dash-settings-item-name')?.setText(col.name);
+				});
+				t.inputEl.onblur = () => this.debouncedSave(true);
+			});
 
 		// ── Icon Picker ───────────────────────────────────────────────────────
 		new Setting(editor)
@@ -468,69 +488,88 @@ export class DashboardSettingTab extends PluginSettingTab {
 				.addText(t => {
 					t.setPlaceholder('Media/Books/')
 						.setValue(col.folderPath ?? '')
-						.onChange(async v => {
+						.onChange(v => {
 							col.folderPath = v.trim();
-							await this.plugin.saveSettings();
+							this.debouncedSave();
 						});
+					t.inputEl.onblur = () => this.debouncedSave(true);
 					new FolderSuggest(this.app, t.inputEl);
 				});
 		} else {
 			new Setting(editor)
 				.setName('Type Field')
 				.setDesc('Frontmatter field used to identify type (default: type)')
-				.addText(t => t.setPlaceholder('type').setValue(col.typeField ?? 'type')
-					.onChange(async v => {
-						col.typeField = v.trim() || 'type';
-						await this.plugin.saveSettings();
-					}));
+				.addText(t => {
+					t.setPlaceholder('type').setValue(col.typeField ?? 'type')
+						.onChange(v => {
+							col.typeField = v.trim() || 'type';
+							this.debouncedSave();
+						});
+					t.inputEl.onblur = () => this.debouncedSave(true);
+				});
 
 			new Setting(editor)
 				.setName('Type Value')
 				.setDesc('Value that identifies notes of this collection (e.g. book)')
-				.addText(t => t.setPlaceholder('book').setValue(col.typeValue ?? '')
-					.onChange(async v => {
-						col.typeValue = v.trim();
-						await this.plugin.saveSettings();
-					}));
+				.addText(t => {
+					t.setPlaceholder('book').setValue(col.typeValue ?? '')
+						.onChange(v => {
+							col.typeValue = v.trim();
+							this.debouncedSave();
+						});
+					t.inputEl.onblur = () => this.debouncedSave(true);
+				});
 		}
 
 		// ── Date Fields (Prorating) ───────────────────────────────────────────
 		new Setting(editor)
 			.setName('Start Date Field (Optional)')
 			.setDesc('Used for Time-Span (prorating) logic in Year in Review mode.')
-			.addText(t => t.setPlaceholder('startDate').setValue(col.startDateField ?? '')
-				.onChange(async v => {
-					col.startDateField = v.trim();
-					await this.plugin.saveSettings();
-				}));
+			.addText(t => {
+				t.setPlaceholder('startDate').setValue(col.startDateField ?? '')
+					.onChange(v => {
+						col.startDateField = v.trim();
+						this.debouncedSave();
+					});
+				t.inputEl.onblur = () => this.debouncedSave(true);
+			});
 
 		new Setting(editor)
 			.setName('End Date Field (Optional)')
 			.setDesc('Used as the primary completion date or end bound in Time-Span logic.')
-			.addText(t => t.setPlaceholder('endDate').setValue(col.endDateField ?? '')
-				.onChange(async v => {
-					col.endDateField = v.trim();
-					await this.plugin.saveSettings();
-				}));
+			.addText(t => {
+				t.setPlaceholder('endDate').setValue(col.endDateField ?? '')
+					.onChange(v => {
+						col.endDateField = v.trim();
+						this.debouncedSave();
+					});
+				t.inputEl.onblur = () => this.debouncedSave(true);
+			});
 
 		// ── Year in Review Filter ─────────────────────────────────────────────
 		new Setting(editor)
 			.setName('Year in Review — Filter Field')
 			.setDesc('When set, only records where this field matches the value below will appear in Year in Review (e.g. "status", "progress"). Leave blank to use ALL records.')
-			.addText(t => t.setPlaceholder('status (e.g.)').setValue(col.yearFilterField ?? '')
-				.onChange(async v => {
-					col.yearFilterField = v.trim() || undefined;
-					await this.plugin.saveSettings();
-				}));
+			.addText(t => {
+				t.setPlaceholder('status (e.g.)').setValue(col.yearFilterField ?? '')
+					.onChange(v => {
+						col.yearFilterField = v.trim() || undefined;
+						this.debouncedSave();
+					});
+				t.inputEl.onblur = () => this.debouncedSave(true);
+			});
 
 		new Setting(editor)
 			.setName('Year in Review — Required Value')
 			.setDesc('The value the filter field must equal (e.g. "true", "completed"). Leave blank to only require the field to be truthy/present.')
-			.addText(t => t.setPlaceholder('true').setValue(col.yearFilterValue ?? '')
-				.onChange(async v => {
-					col.yearFilterValue = v.trim() || undefined;
-					await this.plugin.saveSettings();
-				}));
+			.addText(t => {
+				t.setPlaceholder('true').setValue(col.yearFilterValue ?? '')
+					.onChange(v => {
+						col.yearFilterValue = v.trim() || undefined;
+						this.debouncedSave();
+					});
+				t.inputEl.onblur = () => this.debouncedSave(true);
+			});
 
 		// ── Schema Scan ───────────────────────────────────────────────────────
 		const scanSetting = new Setting(editor)
@@ -610,6 +649,11 @@ export class DashboardSettingTab extends PluginSettingTab {
 	}
 
 	override hide(): void {
+		if (this.saveTimeout) {
+			window.clearTimeout(this.saveTimeout);
+			this.saveTimeout = null;
+			void this.plugin.saveSettings();
+		}
 		// Clean up all document-level dropdown click listeners to prevent memory leaks
 		this.closeDropdowns.forEach(fn => fn());
 		this.closeDropdowns = [];

@@ -12,6 +12,7 @@ export function migrateSettings(loaded: Record<string, unknown> | null | undefin
 		schemaVersion: SCHEMA_VERSION,
 		collections: [],
 		activeYear: new Date().getFullYear(),
+		activeMonth: new Date().getMonth() + 1,
 		activeMode: 'year',
 		overviewPins: [],
 	};
@@ -117,7 +118,8 @@ export function migrateSettings(loaded: Record<string, unknown> | null | undefin
 		...defaults,
 		collections,
 		activeYear: (loaded.activeYear as number | 'all-time') ?? defaults.activeYear,
-		activeMode: (loaded.activeMode as 'year' | 'library') ?? defaults.activeMode,
+		activeMonth: (loaded.activeMonth as number) ?? defaults.activeMonth,
+		activeMode: (loaded.activeMode as any) ?? defaults.activeMode,
 	};
 }
 

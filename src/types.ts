@@ -120,6 +120,7 @@ export interface CollectionConfig {
 	schema: SchemaField[];
 	libraryWidgets: WidgetConfig[];
 	yearWidgets: WidgetConfig[];
+	monthWidgets?: WidgetConfig[];
 	drilldownConfig?: DrilldownConfig;
 	noteDetailConfig?: NoteDetailConfig;
 	
@@ -129,6 +130,8 @@ export interface CollectionConfig {
 }
 
 // ─── Global Settings ──────────────────────────────────────────────────────────
+
+export type DashboardMode = 'library' | 'month' | 'year';
 
 export interface OverviewPin {
 	collectionId: string;
@@ -155,7 +158,8 @@ export interface DashboardSettings {
 	schemaVersion: number;
 	collections: CollectionConfig[];
 	activeYear: number | 'all-time';
-	activeMode: 'year' | 'library';
+	activeMonth?: number; // 1..12 (1 = January, 12 = December)
+	activeMode: DashboardMode;
 	overviewPins: OverviewPin[]; // Kept for minimal backup
 	overviewLayout?: OverviewItem[]; // Ordered list of items on Overview
 	overviewMediaBreakdown?: OverviewMediaBreakdownConfig;

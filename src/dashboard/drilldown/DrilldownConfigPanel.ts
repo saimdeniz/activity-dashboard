@@ -102,18 +102,24 @@ export class DrilldownConfigPanel {
 			};
 		});
 
+		const doc = panel.ownerDocument || document;
+		const closeDropdown = () => {
+			imgDropList.addClass('hidden');
+			imgDropBtn.removeClass('open');
+			doc.removeEventListener('click', closeDropdown);
+		};
+
 		imgDropBtn.onclick = (e) => {
 			e.stopPropagation();
 			const isOpen = !imgDropList.hasClass('hidden');
 			imgDropList.toggleClass('hidden', isOpen);
 			imgDropBtn.toggleClass('open', !isOpen);
+			if (!isOpen) {
+				window.setTimeout(() => doc.addEventListener('click', closeDropdown), 0);
+			} else {
+				doc.removeEventListener('click', closeDropdown);
+			}
 		};
-
-		// Close when clicking outside — use once:true to prevent accumulating listeners on repeated build() calls
-		activeDocument.addEventListener('click', () => {
-			imgDropList.addClass('hidden');
-			imgDropBtn.removeClass('open');
-		}, { once: true });
 
 		// Image Fit
 		const imageFitSection = imgSection.createDiv('dash-config-section');

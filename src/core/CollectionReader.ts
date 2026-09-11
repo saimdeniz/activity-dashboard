@@ -32,8 +32,9 @@ export class CollectionReader {
 
 	loadRecords(
 		config: CollectionConfig,
-		mode: 'year' | 'library',
+		mode: 'year' | 'library' | 'month',
 		year: number | 'all-time',
+		month?: number,
 	): RawRecord[] {
 		const files = this.getCollectionFiles(config);
 		const records: RawRecord[] = [];
@@ -44,10 +45,10 @@ export class CollectionReader {
 
 			let prorationFactor = 1;
 
-			// ── Year-in-Review inclusion filter (global for this collection) ──
-			// In 'year' mode, if the user configured a yearFilterField, skip records
+			// ── Periodic Review inclusion filter (global for this collection) ──
+			// In 'year' or 'month' mode, if the user configured a yearFilterField, skip records
 			// that don't have the required value (e.g. played = true)
-			if (mode === 'year' && config.yearFilterField) {
+			if ((mode === 'year' || mode === 'month') && config.yearFilterField) {
 				const fv = (fm as Record<string, unknown>)[config.yearFilterField];
 				if (config.yearFilterValue) {
 					const required = config.yearFilterValue.toLowerCase();
@@ -60,49 +61,83 @@ export class CollectionReader {
 			}
 
 			// ── Date Filtering & Prorating ─────────────────────────────────────
-			if (mode === 'year') {
+			if (mode === 'year' && year !== 'all-time') {
 				const startVal = config.startDateField ? (fm as Record<string, unknown>)[config.startDateField] : null;
 				const endVal = config.endDateField ? (fm as Record<string, unknown>)[config.endDateField] : null;
 
 				const dStart = startVal ? extractDate(startVal) : null;
 				const dEnd = endVal ? extractDate(endVal) : null;
 
-				if (year !== 'all-time') {
-					// Core rule: In a specific 'year' view, if endDateField is configured,
-					// records MUST have an end date (be "finished").
-					if (config.endDateField && !dEnd) continue;
+				// Core rule: In a specific 'year' view, if endDateField is configured,
+				// records MUST have an end date (be "finished").
+				if (config.endDateField && !dEnd) continue;
 
-					if (dStart && dEnd) {
-						// Both dates exist -> we calculate the percentage of days falling into the target year
-						const totalMs = dEnd.getTime() - dStart.getTime();
-						const totalDays = Math.max(1, (totalMs / 86400000) + 1);
+				if (dStart && dEnd) {
+					// Both dates exist -> calculate percentage of days falling into the target year
+					const totalMs = dEnd.getTime() - dStart.getTime();
+					const totalDays = Math.max(1, Math.round(totalMs / 86400000) + 1);
 
-						const yearStart = Date.UTC(year, 0, 1);
-						const yearEnd = Date.UTC(year, 11, 31, 23, 59, 59, 999);
+					const yearStart = Date.UTC(year, 0, 1);
+					const yearEnd = Date.UTC(year, 11, 31);
 
-						const overlapStart = Math.max(dStart.getTime(), yearStart);
-						const overlapEnd = Math.min(dEnd.getTime(), yearEnd);
+					const overlapStart = Math.max(dStart.getTime(), yearStart);
+					const overlapEnd = Math.min(dEnd.getTime(), yearEnd);
 
-						if (overlapStart > overlapEnd) {
-							continue; // Finished or started outside this year entirely
-						}
-
-						const overlapMs = overlapEnd - overlapStart;
-						const overlapDays = Math.max(1, (overlapMs / 86400000) + 1);
-
-						prorationFactor = overlapDays / totalDays;
-
-					} else if (dEnd) {
-						// Only end date -> exact match required
-						if (dEnd.getUTCFullYear() !== year) continue;
-					} else if (dStart) {
-						// Only start date -> exact match required
-						if (dStart.getUTCFullYear() !== year) continue;
-					} else if (config.startDateField || config.endDateField) {
-						// At least one date field is tracked, but this record has neither.
-						// It doesn't belong to any specific year, so exclude it from year filters.
-						continue;
+					if (overlapStart > overlapEnd) {
+						continue; // Finished or started outside this year entirely
 					}
+
+					const overlapMs = overlapEnd - overlapStart;
+					const overlapDays = Math.max(1, Math.round(overlapMs / 86400000) + 1);
+
+					prorationFactor = Math.min(1, overlapDays / totalDays);
+
+				} else if (dEnd) {
+					// Only end date -> exact match required
+					if (dEnd.getUTCFullYear() !== year) continue;
+				} else if (dStart) {
+					// Only start date -> exact match required
+					if (dStart.getUTCFullYear() !== year) continue;
+				} else if (config.startDateField || config.endDateField) {
+					// At least one date field is tracked, but this record has neither.
+					continue;
+				}
+			} else if (mode === 'month' && year !== 'all-time' && typeof month === 'number' && month >= 1 && month <= 12) {
+				const startVal = config.startDateField ? (fm as Record<string, unknown>)[config.startDateField] : null;
+				const endVal = config.endDateField ? (fm as Record<string, unknown>)[config.endDateField] : null;
+
+				const dStart = startVal ? extractDate(startVal) : null;
+				const dEnd = endVal ? extractDate(endVal) : null;
+
+				// Core rule: In month view, if endDateField is configured, record must have an end date
+				if (config.endDateField && !dEnd) continue;
+
+				if (dStart && dEnd) {
+					const totalMs = dEnd.getTime() - dStart.getTime();
+					const totalDays = Math.max(1, Math.round(totalMs / 86400000) + 1);
+
+					const monthStart = Date.UTC(year, month - 1, 1);
+					// Last day of month at midnight: Date.UTC(year, month, 0) = last day of previous month
+					const lastDayOfMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+					const monthEnd = Date.UTC(year, month - 1, lastDayOfMonth);
+
+					const overlapStart = Math.max(dStart.getTime(), monthStart);
+					const overlapEnd = Math.min(dEnd.getTime(), monthEnd);
+
+					if (overlapStart > overlapEnd) {
+						continue; // Outside this month entirely
+					}
+
+					const overlapMs = overlapEnd - overlapStart;
+					const overlapDays = Math.max(1, Math.round(overlapMs / 86400000) + 1);
+
+					prorationFactor = Math.min(1, overlapDays / totalDays);
+				} else if (dEnd) {
+					if (dEnd.getUTCFullYear() !== year || (dEnd.getUTCMonth() + 1) !== month) continue;
+				} else if (dStart) {
+					if (dStart.getUTCFullYear() !== year || (dStart.getUTCMonth() + 1) !== month) continue;
+				} else if (config.startDateField || config.endDateField) {
+					continue;
 				}
 			}
 

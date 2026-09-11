@@ -5,10 +5,13 @@ import { formatDateUTC, extractDate } from '../utils/dateUtils';
 import { hexToHsl } from '../utils/ColorUtils';
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH_NAMES_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const DAY_LABELS = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
+const WEEKDAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 /**
  * Renders a GitHub-style 52-week activity matrix (Heatmap).
+ * In month mode, renders a compact monthly calendar grid instead.
  */
 export function renderHeatmapWidget(params: {
 	el: HTMLElement;
@@ -17,9 +20,11 @@ export function renderHeatmapWidget(params: {
 	cssVar: (v: string) => string;
 	collectionColor: string;
 	year?: number | 'all-time';
+	month?: number;
+	mode?: 'year' | 'library' | 'month';
 	onDrilldown?: (filterValue: string | null) => void;
 }): void {
-	const { el, records, config, collectionColor, year, onDrilldown } = params;
+	const { el, records, config, collectionColor, year, month, mode, onDrilldown } = params;
 	const dateField = config.field;
 	const numericField = config.heatmapIntensityField;
 
@@ -33,18 +38,19 @@ export function renderHeatmapWidget(params: {
 		}
 	}
 	const availableYears = Array.from(yearCounts.keys()).sort((a, b) => b - a);
-	const currentYear = new Date().getFullYear();
+	const currentYear = new Date().getUTCFullYear();
 
 	let activeHeatmapYear: number;
-	if (year && year !== 'all-time') {
+	const isControlledByGlobalYear = typeof year === 'number' && year > 0;
+
+	if (isControlledByGlobalYear) {
 		activeHeatmapYear = year;
 	} else if (availableYears.includes(currentYear)) {
 		activeHeatmapYear = currentYear;
 	} else {
-		// Prefer current year or most recent past year (<= currentYear)
 		const pastOrCurrent = availableYears.filter(y => y <= currentYear);
 		if (pastOrCurrent.length > 0) {
-			activeHeatmapYear = pastOrCurrent[0]; // latest past year
+			activeHeatmapYear = pastOrCurrent[0];
 		} else if (availableYears.length > 0) {
 			activeHeatmapYear = availableYears[0];
 		} else {
@@ -52,23 +58,52 @@ export function renderHeatmapWidget(params: {
 		}
 	}
 
+	// Compute base colors based on collectionColor and theme mode
+	const hsl = hexToHsl(collectionColor) || { h: 240, s: 70, l: 60 };
+	const h = hsl.h;
+	const s = hsl.s;
+	const isDark = !(typeof activeDocument !== 'undefined' && activeDocument.body ? activeDocument.body : document.body).classList.contains('theme-light');
+
+	// 5 levels of color (Level 0 = empty track background)
+	const colorL1 = isDark ? `hsl(${h}, ${Math.max(25, s - 15)}%, 28%)` : `hsl(${h}, ${Math.max(30, s - 10)}%, 78%)`;
+	const colorL2 = isDark ? `hsl(${h}, ${Math.max(35, s - 5)}%, 42%)` : `hsl(${h}, ${Math.max(40, s)}%, 62%)`;
+	const colorL3 = isDark ? `hsl(${h}, ${Math.max(45, s + 5)}%, 58%)` : `hsl(${h}, ${Math.max(50, s + 10)}%, 48%)`;
+	const colorL4 = isDark ? `hsl(${h}, ${Math.max(55, s + 15)}%, 74%)` : `hsl(${h}, ${Math.max(60, s + 20)}%, 34%)`;
+
+	const getCellColor = (val: number, max: number): string => {
+		if (val <= 0 || max <= 0) return 'var(--dash-heatmap-empty, var(--background-modifier-border-focus, rgba(255,255,255,0.06)))';
+		const ratio = val / max;
+		if (ratio <= 0.25) return colorL1;
+		if (ratio <= 0.50) return colorL2;
+		if (ratio <= 0.75) return colorL3;
+		return colorL4;
+	};
+
 	const container = el.createDiv('dash-heatmap-container');
 
-	const renderYearGrid = (targetYear: number) => {
+	// ── Month Mode: Calendar Grid ──────────────────────────────────────────────
+	if (mode === 'month' && typeof month === 'number' && month >= 1 && month <= 12 && typeof activeHeatmapYear === 'number') {
+		renderMonthGrid(container, records, dateField, numericField, activeHeatmapYear, month, getCellColor, onDrilldown);
+		return;
+	}
+
+	// ── Year / Library Mode: 52-week GitHub Grid ───────────────────────────────
+	const renderGrid = (targetYear: number) => {
 		container.empty();
 
 		const data = GenericAggregator.heatmap(records, dateField, numericField, targetYear);
 
 		// Header summary row with Year Navigator
 		const summaryRow = container.createDiv('dash-heatmap-summary');
+		const periodText = String(targetYear);
 		const totalText = numericField
-			? `${data.total.toLocaleString()} total ${numericField} in ${targetYear}`
-			: `${data.total} ${data.total === 1 ? 'activity' : 'activities'} in ${targetYear}`;
+			? `${data.total.toLocaleString()} total ${numericField} in ${periodText}`
+			: `${data.total} ${data.total === 1 ? 'activity' : 'activities'} in ${periodText}`;
 		summaryRow.createSpan({ text: totalText, cls: 'dash-heatmap-total' });
 
-		// Year navigator: show controls when multiple years exist or in Library Stats / Overview
+		// Year navigator: ONLY show inside Heatmap in Library/All-Time mode where there is no global year picker
 		const allNavYears = Array.from(new Set([...availableYears, currentYear, targetYear])).sort((a, b) => b - a);
-		if (allNavYears.length > 1 || year === 'all-time') {
+		if (!isControlledByGlobalYear && (allNavYears.length > 1 || year === 'all-time')) {
 			const nav = summaryRow.createDiv('dash-heatmap-year-nav');
 			const prevBtn = nav.createEl('button', { cls: 'dash-heatmap-nav-btn', attr: { 'aria-label': 'Older Year' } });
 			setIcon(prevBtn, 'chevron-left');
@@ -87,7 +122,7 @@ export function renderHeatmapWidget(params: {
 				} else {
 					activeHeatmapYear = targetYear - 1;
 				}
-				renderYearGrid(activeHeatmapYear);
+				renderGrid(activeHeatmapYear);
 			};
 
 			nextBtn.onclick = (e) => {
@@ -97,32 +132,9 @@ export function renderHeatmapWidget(params: {
 				} else {
 					activeHeatmapYear = targetYear + 1;
 				}
-				renderYearGrid(activeHeatmapYear);
+				renderGrid(activeHeatmapYear);
 			};
 		}
-
-		// Compute base colors based on collectionColor and theme mode
-		const hsl = hexToHsl(collectionColor) || { h: 240, s: 70, l: 60 };
-		const h = hsl.h;
-		const s = hsl.s;
-		const isDark = !(typeof activeDocument !== 'undefined' && activeDocument.body ? activeDocument.body : document.body).classList.contains('theme-light');
-
-		// 5 levels of color (Level 0 = empty track background)
-		// In dark mode: higher activity is brighter/more saturated
-		// In light mode: higher activity is darker/more saturated
-		const colorL1 = isDark ? `hsl(${h}, ${Math.max(25, s - 15)}%, 28%)` : `hsl(${h}, ${Math.max(30, s - 10)}%, 78%)`;
-		const colorL2 = isDark ? `hsl(${h}, ${Math.max(35, s - 5)}%, 42%)` : `hsl(${h}, ${Math.max(40, s)}%, 62%)`;
-		const colorL3 = isDark ? `hsl(${h}, ${Math.max(45, s + 5)}%, 58%)` : `hsl(${h}, ${Math.max(50, s + 10)}%, 48%)`;
-		const colorL4 = isDark ? `hsl(${h}, ${Math.max(55, s + 15)}%, 74%)` : `hsl(${h}, ${Math.max(60, s + 20)}%, 34%)`;
-
-		const getCellColor = (val: number, max: number): string => {
-			if (val <= 0 || max <= 0) return 'var(--dash-heatmap-empty, var(--background-modifier-border-focus, rgba(255,255,255,0.06)))';
-			const ratio = val / max;
-			if (ratio <= 0.25) return colorL1;
-			if (ratio <= 0.50) return colorL2;
-			if (ratio <= 0.75) return colorL3;
-			return colorL4;
-		};
 
 		// Determine start and end dates for the 52-week calendar grid
 		const startDate = new Date(Date.UTC(targetYear, 0, 1));
@@ -198,10 +210,10 @@ export function renderHeatmapWidget(params: {
 
 		// Position month labels accurately above their starting week columns
 		const totalWeeks = Math.max(weekIdx, 52);
-		monthPositions.forEach(({ month, weekIdx: wIdx }) => {
+		monthPositions.forEach(({ month: mIdx, weekIdx: wIdx }) => {
 			const monthLabel = monthsHeader.createDiv('dash-heatmap-month-label');
 			monthLabel.setCssStyles({ left: `${(wIdx / totalWeeks) * 100}%` });
-			monthLabel.setText(MONTH_NAMES[month]);
+			monthLabel.setText(MONTH_NAMES[mIdx]);
 		});
 
 		// Footer legend (Less [ ][ ][ ][ ][ ] More)
@@ -218,5 +230,113 @@ export function renderHeatmapWidget(params: {
 		legend.createSpan({ text: 'More', cls: 'dash-heatmap-legend-text' });
 	};
 
-	renderYearGrid(activeHeatmapYear);
+	renderGrid(activeHeatmapYear);
+}
+
+// ── Monthly Calendar Heatmap ───────────────────────────────────────────────────
+function renderMonthGrid(
+	container: HTMLElement,
+	records: RawRecord[],
+	dateField: string,
+	numericField: string | undefined,
+	year: number,
+	month: number, // 1-based
+	getCellColor: (val: number, max: number) => string,
+	onDrilldown?: (filterValue: string | null) => void,
+): void {
+	// Compute heatmap data for the specific year
+	const data = GenericAggregator.heatmap(records, dateField, numericField, year);
+
+	// Count totals only within the target month
+	const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+	let monthTotal = 0;
+	let monthMax = 0;
+	for (let d = 1; d <= daysInMonth; d++) {
+		const key = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+		const val = data.daily[key] ?? 0;
+		monthTotal += val;
+		if (val > monthMax) monthMax = val;
+	}
+	monthTotal = Math.round(monthTotal * 100) / 100;
+
+	const mName = MONTH_NAMES[month - 1];
+	const mNameFull = MONTH_NAMES_FULL[month - 1];
+
+	// ── Header row ────────────────────────────────────────────────
+	const summaryRow = container.createDiv('dash-heatmap-summary');
+	const totalLabel = numericField
+		? `${monthTotal.toLocaleString()} total ${numericField} in ${mName} ${year}`
+		: `${monthTotal} ${monthTotal === 1 ? 'activity' : 'activities'} in ${mName} ${year}`;
+	summaryRow.createSpan({ text: totalLabel, cls: 'dash-heatmap-total' });
+
+	// ── Month Calendar Grid ───────────────────────────────────────
+	const calWrap = container.createDiv('dash-heatmap-cal-wrap');
+
+	// Weekday header row: Mon Tue Wed Thu Fri Sat Sun
+	const headerRow = calWrap.createDiv('dash-heatmap-cal-header');
+	WEEKDAY_HEADERS.forEach(label => {
+		headerRow.createDiv({ text: label, cls: 'dash-heatmap-cal-weekday' });
+	});
+
+	// Grid area — 7 columns
+	const grid = calWrap.createDiv('dash-heatmap-cal-grid');
+
+	// First day of month: what weekday? (0=Mon ... 6=Sun, ISO-style)
+	const firstDayDate = new Date(Date.UTC(year, month - 1, 1));
+	const firstWeekday = (firstDayDate.getUTCDay() + 6) % 7; // 0=Mon, 6=Sun
+
+	// Leading empty cells
+	for (let i = 0; i < firstWeekday; i++) {
+		const blank = grid.createDiv('dash-heatmap-cal-cell dash-heatmap-cal-cell-blank');
+		blank.setAttribute('aria-hidden', 'true');
+	}
+
+	// Day cells
+	for (let day = 1; day <= daysInMonth; day++) {
+		const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+		const val = data.daily[dateStr] ?? 0;
+		const bgColor = getCellColor(val, monthMax);
+
+		const cell = grid.createDiv('dash-heatmap-cal-cell');
+		cell.setCssStyles({ backgroundColor: bgColor });
+
+		// Day number label
+		cell.createSpan({ text: String(day), cls: 'dash-heatmap-cal-day-num' });
+
+		// Tooltip
+		const valLabel = numericField ? `${val} (${numericField})` : `${val} record${val === 1 ? '' : 's'}`;
+		const tooltip = `${mNameFull} ${day}, ${year}: ${valLabel}`;
+		cell.setAttribute('title', tooltip);
+		cell.setAttribute('aria-label', tooltip);
+
+		// Clickable if has data
+		if (val > 0 && onDrilldown) {
+			cell.addClass('dash-clickable');
+			cell.onclick = (e) => {
+				e.stopPropagation();
+				onDrilldown(dateStr);
+			};
+		}
+	}
+
+	// Trailing empty cells to fill last row
+	const totalCells = firstWeekday + daysInMonth;
+	const trailingCells = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+	for (let i = 0; i < trailingCells; i++) {
+		const blank = grid.createDiv('dash-heatmap-cal-cell dash-heatmap-cal-cell-blank');
+		blank.setAttribute('aria-hidden', 'true');
+	}
+
+	// ── Footer legend ─────────────────────────────────────────────
+	const footer = container.createDiv('dash-heatmap-footer');
+	const legend = footer.createDiv('dash-heatmap-legend');
+	legend.createSpan({ text: 'Less', cls: 'dash-heatmap-legend-text' });
+
+	const levels = [0, 0.25, 0.5, 0.75, 1.0];
+	levels.forEach((lvl) => {
+		const swatch = legend.createDiv('dash-heatmap-legend-cell');
+		swatch.setCssStyles({ backgroundColor: getCellColor(lvl > 0 ? (lvl * (monthMax || 1)) : 0, monthMax || 1) });
+	});
+
+	legend.createSpan({ text: 'More', cls: 'dash-heatmap-legend-text' });
 }

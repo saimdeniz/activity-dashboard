@@ -179,14 +179,13 @@ export class SchemaScanner {
 				schemaMap.set(key, newField);
 				changed = true;
 			} else {
+				// Do not overwrite existing type based on a single file — the full scan uses
+				// majority voting across all notes; a single mis-typed note could corrupt the schema.
+				// Only update sampleValues for existing fields.
 				const oldSamples = [...existing.sampleValues];
 				const newSamples = this.extractSamples([value, ...oldSamples], existing.type);
 				if (JSON.stringify(oldSamples) !== JSON.stringify(newSamples)) {
 					existing.sampleValues = newSamples;
-					changed = true;
-				}
-				if (existing.type === 'text' && inferred !== 'text') {
-					existing.type = inferred;
 					changed = true;
 				}
 			}

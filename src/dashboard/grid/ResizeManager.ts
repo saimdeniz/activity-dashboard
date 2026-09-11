@@ -34,7 +34,7 @@ export function attachResizeHandles(
 		card.addClass('dash-resizing');
 		const startX = startEv.clientX;
 		const gridWidth = grid.offsetWidth;
-		const colWidth = gridWidth / 12;
+		const colWidth = (gridWidth || 1) / 12;
 		const curSpan = currentSize.span;
 
 		const onMove = (mv: MouseEvent) => {
@@ -79,7 +79,7 @@ export function attachResizeHandles(
 		card.addClass('dash-resizing');
 		const startX = startEv.touches[0].clientX;
 		const gridWidth = grid.offsetWidth;
-		const colWidth = gridWidth / 12;
+		const colWidth = (gridWidth || 1) / 12;
 		const curSpan = currentSize.span;
 
 		const onTouchMove = (mv: TouchEvent) => {

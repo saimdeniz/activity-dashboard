@@ -19,17 +19,25 @@ export function extractDate(value: unknown): Date | null {
 		const matchYMD = s.match(/^(\d{4})[-/.](\d{1,2})(?:[-/.](\d{1,2}))?/);
 		if (matchYMD) {
 			const year = parseInt(matchYMD[1], 10);
-			const month = parseInt(matchYMD[2], 10) - 1;
+			const month = parseInt(matchYMD[2], 10) - 1; // 0-indexed
 			const day = matchYMD[3] ? parseInt(matchYMD[3], 10) : 1;
-			return new Date(Date.UTC(year, month, day));
+			if (month < 0 || month > 11 || day < 1 || day > 31) return null;
+			const d = new Date(Date.UTC(year, month, day));
+			if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month || d.getUTCDate() !== day) return null;
+			return d;
 		}
 		// Match DD-MM-YYYY, DD/MM/YYYY, or DD.MM.YYYY
 		const matchDMY = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);
 		if (matchDMY) {
 			const day = parseInt(matchDMY[1], 10);
-			const month = parseInt(matchDMY[2], 10) - 1;
+			const month = parseInt(matchDMY[2], 10) - 1; // 0-indexed
 			const year = parseInt(matchDMY[3], 10);
-			return new Date(Date.UTC(year, month, day));
+			// Validate bounds before construction to prevent silent date overflow
+			if (month < 0 || month > 11 || day < 1 || day > 31) return null;
+			const d = new Date(Date.UTC(year, month, day));
+			// Verify no silent overflow occurred (e.g. Feb 30 shifting to March)
+			if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month || d.getUTCDate() !== day) return null;
+			return d;
 		}
 		
 		const d = new Date(s);

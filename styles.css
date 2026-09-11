@@ -192,6 +192,71 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(var(--active-theme-rgb, 129, 140, 248), 0.35);
 }
 
+.dash-today-btn {
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.14s ease;
+  height: 34px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+}
+
+.dash-today-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+  border-color: var(--active-theme-color, var(--interactive-accent));
+}
+
+.dash-month-nav {
+  display: flex;
+  align-items: center;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.dash-month-nav .dash-nav-btn {
+  border: none;
+  background: transparent;
+  padding: 4px 8px;
+  min-height: 26px;
+}
+
+.dash-month-label-btn {
+  background: transparent;
+  border: none;
+  color: var(--active-theme-color, var(--interactive-accent));
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 6px;
+  transition: background 0.14s ease;
+}
+
+.dash-month-label-btn:hover {
+  background: var(--background-modifier-hover);
+}
+
+.dash-dropdown-chevron svg,
+.dash-dropdown-chevron .svg-icon {
+  width: 12px;
+  height: 12px;
+  opacity: 0.7;
+}
+
 .dash-topbar-right {
   position: absolute;
   right: 28px;
@@ -552,6 +617,33 @@
   justify-content: center;
   min-height: 0;
 }
+/* Heatmap in mini mode: don't center, fill column top to bottom */
+.dash-widget-h-mini .dash-heatmap-container {
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+/* Monthly calendar in mini mode: tighter gaps, smaller day numbers */
+.dash-widget-h-mini .dash-heatmap-cal-wrap {
+  gap: 2px;
+}
+
+.dash-widget-h-mini .dash-heatmap-cal-grid {
+  gap: 2px;
+}
+
+.dash-widget-h-mini .dash-heatmap-cal-day-num {
+  font-size: 7px;
+}
+
+.dash-widget-h-mini .dash-heatmap-cal-weekday {
+  font-size: 7px;
+}
+
+.dash-widget-h-mini .dash-heatmap-summary {
+  font-size: 0.68rem;
+}
+
 
 .dash-widget-h-mini .dash-number-card {
   padding: 2px 4px;
@@ -953,7 +1045,8 @@
 .dash-heatmap-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   width: 100%;
   gap: 8px;
   overflow: hidden;
@@ -1086,6 +1179,11 @@
   white-space: nowrap;
 }
 
+.dash-heatmap-month-label.dash-heatmap-month-label-active {
+  color: var(--active-theme-color, var(--interactive-accent));
+  font-weight: 800;
+}
+
 .dash-heatmap-grid-columns {
   display: flex;
   width: 100%;
@@ -1147,6 +1245,89 @@
   height: 10px;
   border-radius: 2px;
 }
+
+/* ── Monthly Calendar Heatmap ──────────────────────────────── */
+.dash-heatmap-cal-wrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  gap: 4px;
+  min-width: 0;
+  min-height: 0;   /* allow flex shrink */
+  overflow: hidden;
+}
+
+.dash-heatmap-cal-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  padding: 0 0 2px 0;
+  flex-shrink: 0;
+}
+
+.dash-heatmap-cal-weekday {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-align: center;
+  user-select: none;
+}
+
+.dash-heatmap-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  /* rows fill available height equally — no aspect-ratio on cells */
+  grid-auto-rows: 1fr;
+  gap: 3px;
+  flex: 1;
+  min-height: 0;   /* critical: lets grid shrink inside flex */
+  overflow: hidden;
+}
+
+.dash-heatmap-cal-cell {
+  position: relative;
+  /* NO aspect-ratio — height determined by grid-auto-rows: 1fr */
+  border-radius: 5px;
+  background-color: var(--dash-heatmap-empty, var(--background-modifier-border-focus, rgba(255, 255, 255, 0.06)));
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 2px 3px;
+  box-sizing: border-box;
+  transition: transform 0.12s ease, filter 0.12s ease;
+  cursor: default;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dash-heatmap-cal-cell.dash-clickable {
+  cursor: pointer;
+}
+
+.dash-heatmap-cal-cell:hover:not(.dash-heatmap-cal-cell-blank) {
+  transform: scale(1.08);
+  filter: brightness(1.25);
+  z-index: 5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.dash-heatmap-cal-cell-blank {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dash-heatmap-cal-day-num {
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--text-muted);
+  line-height: 1;
+  user-select: none;
+  opacity: 0.7;
+}
+
+
+
 /* ═══════════════════════════════════════════════════════════════
    Dashboard Settings Tab Styles
    ═══════════════════════════════════════════════════════════════ */
@@ -2141,6 +2322,7 @@
 }
 
 .dash-drilldown-img-wrap {
+  position: relative;
   width: 100%;
   aspect-ratio: var(--dd-img-ratio, 1);
   border-radius: 6px;
@@ -2278,9 +2460,6 @@
   padding: 0;
 }
 
-.dash-drilldown-img-wrap {
-  position: relative;
-}
 
 .dash-drilldown-card:hover .dash-drilldown-quick-open,
 .dash-drilldown-card:hover .dash-drilldown-quick-edit {
@@ -4545,4 +4724,17 @@
 .ndm-cust-link-del-btn .svg-icon {
   width: 13px;
   height: 13px;
+}
+
+/* ── Focus Visible Accessibility ────────────────────────────── */
+.dash-view button:focus-visible,
+.dash-view input:focus-visible,
+.dash-view .dash-clickable:focus-visible,
+.dash-glance-window button:focus-visible,
+.dash-glance-window input:focus-visible,
+.dash-modal-dialog button:focus-visible,
+.dash-modal-dialog input:focus-visible,
+.dash-drilldown-table-row:focus-visible {
+  outline: 2px solid var(--interactive-accent, #818cf8);
+  outline-offset: 2px;
 }

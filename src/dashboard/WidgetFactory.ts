@@ -26,10 +26,12 @@ export class WidgetFactory {
 		charts: Chart[];
 		colorTheme?: 'classic' | 'pastel' | 'neon' | 'monochrome';
 		year?: number | 'all-time';
+		month?: number;
+		mode?: 'year' | 'library' | 'month';
 		onDrilldown?: (filterValue: string | null) => void;
 		onSave?: () => Promise<void>;
 	}): void {
-		const { body, config, records, collection, charts, colorTheme, year, onDrilldown, onSave } = params;
+		const { body, config, records, collection, charts, colorTheme, year, month, mode, onDrilldown, onSave } = params;
 
 		const base = {
 			el: body,
@@ -40,6 +42,8 @@ export class WidgetFactory {
 			collectionColor: collection.color,
 			colorTheme,
 			year,
+			month,
+			mode,
 			onDrilldown,
 			onSave,
 		};

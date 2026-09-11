@@ -155,6 +155,33 @@
   min-height: 0;
 }
 
+/* Heatmap in mini mode: don't center, fill column top to bottom */
+.dash-widget-h-mini .dash-heatmap-container {
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+/* Monthly calendar in mini mode: tighter gaps, smaller day numbers */
+.dash-widget-h-mini .dash-heatmap-cal-wrap {
+  gap: 2px;
+}
+
+.dash-widget-h-mini .dash-heatmap-cal-grid {
+  gap: 2px;
+}
+
+.dash-widget-h-mini .dash-heatmap-cal-day-num {
+  font-size: 7px;
+}
+
+.dash-widget-h-mini .dash-heatmap-cal-weekday {
+  font-size: 7px;
+}
+
+.dash-widget-h-mini .dash-heatmap-summary {
+  font-size: 0.68rem;
+}
+
 .dash-widget-h-mini .dash-number-card {
   padding: 2px 4px;
   gap: 2px;

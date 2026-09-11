@@ -76,6 +76,8 @@ export class GlanceDrilldown {
 			const trueLabel = config.trueLabel || 'True (Yes)';
 			const falseLabel = config.falseLabel || 'False (No)';
 			catList = [trueLabel, falseLabel];
+		} else if (config.type === 'ranking') {
+			catList = [];
 		} else {
 			const categories = new Set<string>();
 			records.forEach(r => {
@@ -183,12 +185,19 @@ export class GlanceDrilldown {
 			])
 		];
 
-		let searchQuery = '';
-		let sortBy = 'title-asc';
+		let searchQuery = (config.type === 'ranking' && initialFilter) ? initialFilter.toLowerCase() : '';
+		if (searchQuery && initialFilter) {
+			searchInput.value = initialFilter;
+		}
 
+		let sortBy = (config.type === 'ranking' && config.field) ? `${config.field}-desc` : 'title-asc';
+		// Fallback to title-asc if the field sort option does not exist in schema
+		if (!sortOptions.some(o => o.value === sortBy)) sortBy = 'title-asc';
+
+		const initialSortOpt = sortOptions.find(o => o.value === sortBy);
 		const sortDropWrap = sortWrap.createDiv('dash-custom-dropdown');
 		const sortDropBtn = sortDropWrap.createDiv('dash-custom-dropdown-btn');
-		const sortDropLabel = sortDropBtn.createSpan({ text: 'Title (A-Z)', cls: 'dash-custom-dropdown-label' });
+		const sortDropLabel = sortDropBtn.createSpan({ text: initialSortOpt?.label || 'Title (A-Z)', cls: 'dash-custom-dropdown-label' });
 		const sortDropArrow = sortDropBtn.createSpan({ cls: 'dash-custom-dropdown-arrow' });
 		setIcon(sortDropArrow, 'chevron-down');
 		const sortDropList = sortDropWrap.createDiv('dash-custom-dropdown-list hidden');

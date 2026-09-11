@@ -2,7 +2,7 @@ import { ItemView, WorkspaceLeaf, setIcon, Menu, Notice } from 'obsidian';
 import { Chart as ChartJS, registerables, type Chart } from 'chart.js';
 import type {
 	CollectionConfig, DashboardSettings, OverviewItem,
-	RawRecord, WidgetConfig,
+	RawRecord, WidgetConfig, DashboardMode,
 } from '../types';
 import { migrateSize, sizeToClass } from '../types';
 import { CollectionReader } from '../core/CollectionReader';
@@ -25,13 +25,15 @@ ChartJS.register(...registerables);
 export const VIEW_TYPE_DASHBOARD = 'dynamic-dashboard-view';
 
 export class DashboardView extends ItemView {
-	private year: number | 'all-time' = new Date().getFullYear();
-	private activeMode: 'year' | 'library' = 'library';
+	private year: number | 'all-time' = new Date().getUTCFullYear();
+	private month: number = new Date().getUTCMonth() + 1; // 1..12
+	private activeMode: DashboardMode = 'library';
 	private activeTab = 'overview'; // collectionId or 'overview'
 	private charts: Chart[] = [];
 	private chartFactoryQueue: (() => void)[] = [];
 	private flushRaf: number | null = null;
 	private isRendering = false;
+	private hasPendingRender = false;
 	private static copiedWidgets: WidgetConfig[] | null = null;
 
 	private glanceDrilldown: GlanceDrilldown;
@@ -56,7 +58,8 @@ export class DashboardView extends ItemView {
 
 	async onOpen(): Promise<void> {
 		this.activeMode = this.settings.activeMode || 'library';
-		this.year = this.settings.activeYear || new Date().getFullYear();
+		this.year = this.settings.activeYear || new Date().getUTCFullYear();
+		this.month = this.settings.activeMonth || (new Date().getUTCMonth() + 1);
 
 		this.contentEl.addEventListener('dragover', this.onDragOverHandler);
 		this.contentEl.addEventListener('dragend', this.onDragEndHandler);
@@ -164,12 +167,16 @@ export class DashboardView extends ItemView {
 	}
 
 	private getActiveWidgets(col: CollectionConfig): WidgetConfig[] {
-		return this.activeMode === 'library' ? (col.libraryWidgets || []) : (col.yearWidgets || []);
+		if (this.activeMode === 'library') return col.libraryWidgets || [];
+		if (this.activeMode === 'month') return col.monthWidgets && col.monthWidgets.length ? col.monthWidgets : (col.yearWidgets || []);
+		return col.yearWidgets || [];
 	}
 
 	private setActiveWidgets(col: CollectionConfig, widgets: WidgetConfig[]): void {
 		if (this.activeMode === 'library') {
 			col.libraryWidgets = widgets;
+		} else if (this.activeMode === 'month') {
+			col.monthWidgets = widgets;
 		} else {
 			col.yearWidgets = widgets;
 		}
@@ -177,51 +184,57 @@ export class DashboardView extends ItemView {
 
 	// ── Main Render Orchestration ─────────────────────────────
 	private async render(): Promise<void> {
-		if (this.isRendering) return;
+		if (this.isRendering) {
+			this.hasPendingRender = true;
+			return;
+		}
 		this.isRendering = true;
 		try {
-			this.destroyCharts();
-			this.chartFactoryQueue = [];
+			do {
+				this.hasPendingRender = false;
+				this.destroyCharts();
+				this.chartFactoryQueue = [];
 
-			const { contentEl } = this;
-			contentEl.empty();
-			contentEl.addClass('dash-view');
+				const { contentEl } = this;
+				contentEl.empty();
+				contentEl.addClass('dash-view');
 
-			const isDarkTheme = this.isDark;
-			const activeColor = this.activeTab === 'overview' 
-				? (this.settings.overviewColor || '#818cf8') 
-				: (this.settings.collections?.find(c => c.id === this.activeTab)?.color || '#818cf8');
-			const activeFg = getAdaptiveForeground(activeColor, isDarkTheme);
-			const activeRgb = hexToRgbString(activeFg);
-			const activeContrast = getContrastTextColor(activeFg);
+				const isDarkTheme = this.isDark;
+				const activeColor = this.activeTab === 'overview' 
+					? (this.settings.overviewColor || '#818cf8') 
+					: (this.settings.collections?.find(c => c.id === this.activeTab)?.color || '#818cf8');
+				const activeFg = getAdaptiveForeground(activeColor, isDarkTheme);
+				const activeRgb = hexToRgbString(activeFg);
+				const activeContrast = getContrastTextColor(activeFg);
 
-			contentEl.setCssProps({
-				'--col-color': activeColor,
-				'--col-fg': activeFg,
-				'--col-rgb': activeRgb,
-				'--col-contrast': activeContrast,
-			});
+				contentEl.setCssProps({
+					'--col-color': activeColor,
+					'--col-fg': activeFg,
+					'--col-rgb': activeRgb,
+					'--col-contrast': activeContrast,
+				});
 
-			this.renderTopBar(contentEl);
-			this.renderPageHeader(contentEl);
-			this.renderTabs(contentEl);
+				this.renderTopBar(contentEl);
+				this.renderPageHeader(contentEl);
+				this.renderTabs(contentEl);
 
-			const contentOuter = contentEl.createDiv('dash-content-outer');
-			const content = contentOuter.createDiv('dash-content');
+				const contentOuter = contentEl.createDiv('dash-content-outer');
+				const content = contentOuter.createDiv('dash-content');
 
-			if (this.activeTab === 'overview') {
-				this.renderOverview(content);
-			} else {
-				const col = this.settings.collections?.find(c => c.id === this.activeTab);
-				if (col) {
-					this.renderCollection(content, col);
-				} else {
-					this.activeTab = 'overview';
+				if (this.activeTab === 'overview') {
 					this.renderOverview(content);
+				} else {
+					const col = this.settings.collections?.find(c => c.id === this.activeTab);
+					if (col) {
+						this.renderCollection(content, col);
+					} else {
+						this.activeTab = 'overview';
+						this.renderOverview(content);
+					}
 				}
-			}
 
-			this.flushChartQueue();
+				this.flushChartQueue();
+			} while (this.hasPendingRender);
 		} catch (err) {
 			console.error('[ActivityDashboard] Error rendering dashboard:', err);
 			this.contentEl.empty();
@@ -259,31 +272,110 @@ export class DashboardView extends ItemView {
 			'--active-theme-rgb': activeRgb,
 		});
 
-		const switchWrap = bar.createDiv('dash-mode-switch');
-		(['library', 'year'] as const).forEach(mode => {
-			const label = mode === 'year' ? 'Year in Review' : 'Library Stats';
-			const btn = switchWrap.createEl('button', {
+		// ── Unified Mode Switch: [ Library | Month | Year ] ──
+		const modeSwitch = bar.createDiv('dash-mode-switch');
+		const modes: { mode: DashboardMode; label: string; tooltip: string }[] = [
+			{ mode: 'library', label: 'Library', tooltip: 'Library Stats' },
+			{ mode: 'month', label: 'Month', tooltip: 'Month in Review' },
+			{ mode: 'year', label: 'Year', tooltip: 'Year in Review' },
+		];
+		modes.forEach(({ mode, label, tooltip }) => {
+			const btn = modeSwitch.createEl('button', {
 				text: label,
 				cls: `dash-mode-btn ${this.activeMode === mode ? 'active' : ''}`,
+				attr: { 'aria-label': tooltip },
 			});
-			btn.onclick = async () => { 
-				this.activeMode = mode; 
+			btn.onclick = async () => {
+				this.activeMode = mode;
 				this.settings.activeMode = mode;
 				await this.saveQuiet();
-				void this.render(); 
+				void this.render();
 			};
 		});
 
 		const right = bar.createDiv('dash-topbar-right');
 
-		if (this.activeMode === 'year') {
+		if (this.activeMode === 'month') {
+			const todayBtn = right.createEl('button', {
+				text: 'Today',
+				cls: 'dash-today-btn',
+				attr: { 'aria-label': 'Current month' },
+			});
+			todayBtn.onclick = async () => {
+				this.year = new Date().getUTCFullYear();
+				this.month = new Date().getUTCMonth() + 1;
+				this.settings.activeYear = this.year;
+				this.settings.activeMonth = this.month;
+				await this.saveQuiet();
+				void this.render();
+			};
+
+			const monthNav = right.createDiv('dash-month-nav');
+			const prevMonth = monthNav.createEl('button', { cls: 'dash-nav-btn', attr: { 'aria-label': 'Previous month' } });
+			setIcon(prevMonth, 'chevron-left');
+			prevMonth.onclick = async () => {
+				if (this.month === 1) {
+					this.month = 12;
+					if (typeof this.year === 'number') this.year--;
+				} else {
+					this.month--;
+				}
+				this.settings.activeMonth = this.month;
+				this.settings.activeYear = this.year;
+				await this.saveQuiet();
+				void this.render();
+			};
+
+			const monthBtn = monthNav.createEl('button', {
+				cls: 'dash-month-label-btn',
+				attr: { 'aria-label': 'Select month' },
+			});
+			const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+			const curYearStr = this.year === 'all-time' ? new Date().getUTCFullYear() : this.year;
+			monthBtn.createSpan({ text: `${monthNames[this.month - 1]} ${curYearStr}` });
+			const chevron = monthBtn.createSpan({ cls: 'dash-dropdown-chevron' });
+			setIcon(chevron, 'chevron-down');
+
+			monthBtn.onclick = (e) => {
+				const menu = new Menu();
+				monthNames.forEach((name, idx) => {
+					const mNum = idx + 1;
+					menu.addItem(item => {
+						item.setTitle(name)
+							.setChecked(this.month === mNum)
+							.onClick(async () => {
+								this.month = mNum;
+								this.settings.activeMonth = this.month;
+								await this.saveQuiet();
+								void this.render();
+							});
+					});
+				});
+				menu.showAtMouseEvent(e);
+			};
+
+			const nextMonth = monthNav.createEl('button', { cls: 'dash-nav-btn', attr: { 'aria-label': 'Next month' } });
+			setIcon(nextMonth, 'chevron-right');
+			nextMonth.onclick = async () => {
+				if (this.month === 12) {
+					this.month = 1;
+					if (typeof this.year === 'number') this.year++;
+				} else {
+					this.month++;
+				}
+				this.settings.activeMonth = this.month;
+				this.settings.activeYear = this.year;
+				await this.saveQuiet();
+				void this.render();
+			};
+		} else if (this.activeMode === 'year') {
 			const allTimeBtn = right.createEl('button', {
 				cls: `dash-nav-btn ${this.year === 'all-time' ? 'active' : ''}`,
 				attr: { 'aria-label': 'All Time' },
 			});
 			setIcon(allTimeBtn, 'infinity');
 			allTimeBtn.onclick = async () => {
-				this.year = this.year === 'all-time' ? new Date().getFullYear() : 'all-time';
+				this.year = this.year === 'all-time' ? new Date().getUTCFullYear() : 'all-time';
 				this.settings.activeYear = this.year;
 				await this.saveQuiet();
 				void this.render();
@@ -333,7 +425,7 @@ export class DashboardView extends ItemView {
 		if (this.activeTab === 'overview') {
 			let totalRecs = 0;
 			for (const c of this.settings.collections) {
-				totalRecs += reader.loadRecords(c, this.activeMode, this.year).length;
+				totalRecs += reader.loadRecords(c, this.activeMode, this.year, this.month).length;
 			}
 			count = totalRecs;
 			color = this.settings.overviewColor || '#818cf8';
@@ -343,7 +435,7 @@ export class DashboardView extends ItemView {
 				title = col.name;
 				iconName = col.icon;
 				color = col.color;
-				count = reader.loadRecords(col, this.activeMode, this.year).length;
+				count = reader.loadRecords(col, this.activeMode, this.year, this.month).length;
 			}
 		}
 
@@ -376,7 +468,7 @@ export class DashboardView extends ItemView {
 
 		const reader = new CollectionReader(this.app);
 		for (const col of this.settings.collections) {
-			const count = reader.loadRecords(col, this.activeMode, this.year).length;
+			const count = reader.loadRecords(col, this.activeMode, this.year, this.month).length;
 			this.buildTab(bar, col.id, col.icon, `${col.name} (${count})`, this.activeTab === col.id, col.color);
 		}
 	}
@@ -478,7 +570,8 @@ export class DashboardView extends ItemView {
 			const col = cols.find(c => c.id === item.collectionId);
 			if (!col) return false;
 			return (col.libraryWidgets || []).some(w => w.id === item.id) 
-				|| (col.yearWidgets || []).some(w => w.id === item.id);
+				|| (col.yearWidgets || []).some(w => w.id === item.id)
+				|| (col.monthWidgets || []).some(w => w.id === item.id);
 		});
 
 		if (this.settings.overviewLayout.length !== before) {
@@ -503,11 +596,12 @@ export class DashboardView extends ItemView {
 				const col = cols.find(c => c.id === item.collectionId);
 				if (!col) continue;
 				const widgetCfg = (col.libraryWidgets || []).find(w => w.id === item.id) 
-								|| (col.yearWidgets || []).find(w => w.id === item.id);
+								|| (col.yearWidgets || []).find(w => w.id === item.id)
+								|| (col.monthWidgets || []).find(w => w.id === item.id);
 				if (!widgetCfg) continue;
 
 				const reader = new CollectionReader(this.app);
-				const records = reader.loadRecords(col, this.activeMode, this.year);
+				const records = reader.loadRecords(col, this.activeMode, this.year, this.month);
 				this.buildWidgetCard(grid, col, widgetCfg, records, true, true, undefined, item);
 			}
 		}
@@ -519,7 +613,7 @@ export class DashboardView extends ItemView {
 		
 		let total = 0;
 		for (const col of cols) {
-			const records = reader.loadRecords(col, this.activeMode, this.year);
+			const records = reader.loadRecords(col, this.activeMode, this.year, this.month);
 			total += records.length;
 		}
 
@@ -606,7 +700,7 @@ export class DashboardView extends ItemView {
 		let totalItems = 0;
 
 		for (const col of cols) {
-			const records = reader.loadRecords(col, this.activeMode, this.year);
+			const records = reader.loadRecords(col, this.activeMode, this.year, this.month);
 			if (records.length > 0) {
 				labels.push(col.name);
 				data.push(records.length);
@@ -760,7 +854,7 @@ export class DashboardView extends ItemView {
 					const clickedColName = labels[idx];
 					const clickedCol = cols.find(c => c.name === clickedColName);
 					if (clickedCol) {
-						const colRecords = reader.loadRecords(clickedCol, this.activeMode, this.year);
+						const colRecords = reader.loadRecords(clickedCol, this.activeMode, this.year, this.month);
 						this.glanceDrilldown.show({
 							parentEl: this.contentEl,
 							col: clickedCol,
@@ -773,12 +867,12 @@ export class DashboardView extends ItemView {
 							},
 							initialFilter: null,
 							records: colRecords,
-							globalYear: this.activeMode === 'year' ? this.year : 'all-time',
+							globalYear: this.activeMode === 'library' ? 'all-time' : this.year,
 							onSaveQuiet: () => this.saveQuiet(),
 							onReloadRecords: () => {
 								const rdr = new CollectionReader(this.app);
-								const yr = this.activeMode === 'year' ? this.year : 'all-time';
-								return rdr.loadRecords(clickedCol, this.activeMode, yr);
+								const yr = this.activeMode === 'library' ? 'all-time' : this.year;
+								return rdr.loadRecords(clickedCol, this.activeMode, yr, this.month);
 							}
 						});
 					}
@@ -835,7 +929,7 @@ export class DashboardView extends ItemView {
 		};
 
 		const reader = new CollectionReader(this.app);
-		const records = reader.loadRecords(col, this.activeMode, this.year);
+		const records = reader.loadRecords(col, this.activeMode, this.year, this.month);
 		const activeWidgets = this.getActiveWidgets(col);
 		
 		if (!activeWidgets.length) {
@@ -1014,7 +1108,7 @@ export class DashboardView extends ItemView {
 					await this.saveQuiet();
 					
 					const reader = new CollectionReader(this.app);
-					const recs = reader.loadRecords(col, this.activeMode, this.year);
+					const recs = reader.loadRecords(col, this.activeMode, this.year, this.month);
 					const parentGrid = card.parentElement!;
 					const placeholder = createDiv();
 					parentGrid.insertBefore(placeholder, card);
@@ -1071,7 +1165,9 @@ export class DashboardView extends ItemView {
 			factory.render({ 
 				body, config, records: widgetRecords, collection: col, charts: this.charts,
 				colorTheme: this.settings.colorPaletteTheme,
-				year: this.activeMode === 'year' ? this.year : 'all-time',
+				year: this.activeMode === 'library' ? 'all-time' : this.year,
+				month: this.month,
+				mode: this.activeMode,
 				onDrilldown: (filterVal) => {
 					let drilldownRecords = widgetRecords;
 					if (config.type === 'activity' || config.type === 'heatmap') {
@@ -1089,8 +1185,8 @@ export class DashboardView extends ItemView {
 					}
 					const reloadFn = () => {
 						const rdr = new CollectionReader(this.app);
-						const yr = this.activeMode === 'year' ? this.year : 'all-time';
-						let recs = rdr.loadRecords(col, this.activeMode, yr);
+						const yr = this.activeMode === 'library' ? 'all-time' : this.year;
+						let recs = rdr.loadRecords(col, this.activeMode, yr, this.month);
 						if (config.type === 'activity' || config.type === 'heatmap') {
 							recs = rdr.loadRecords(col, this.activeMode, 'all-time');
 						}
@@ -1110,7 +1206,7 @@ export class DashboardView extends ItemView {
 						config,
 						initialFilter: filterVal,
 						records: drilldownRecords,
-						globalYear: this.activeMode === 'year' ? this.year : 'all-time',
+						globalYear: this.activeMode === 'library' ? 'all-time' : this.year,
 						onSaveQuiet: () => this.saveQuiet(),
 						onReloadRecords: reloadFn,
 					});

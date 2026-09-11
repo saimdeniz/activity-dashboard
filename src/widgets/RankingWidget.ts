@@ -1,6 +1,7 @@
 import { Chart } from 'chart.js';
 import { type RawRecord, type WidgetConfig, CHART_PALETTE } from '../types';
 import { GenericAggregator } from '../core/GenericAggregator';
+import { generatePalette } from '../utils/ColorUtils';
 import { buildTooltipLabelCallback, buildScalesConfig, formatValue } from '../utils/ChartUtils';
 
 /**
@@ -13,9 +14,10 @@ export function renderRankingWidget(params: {
 	charts: Chart[];
 	cssVar: (v: string) => string;
 	collectionColor: string;
+	colorTheme?: 'classic' | 'pastel' | 'neon' | 'monochrome';
 	onDrilldown?: (filterValue: string | null) => void;
 }): void {
-	const { el, records, config, charts, cssVar, onDrilldown } = params;
+	const { el, records, config, charts, cssVar, collectionColor, colorTheme, onDrilldown } = params;
 	const topN = config.topN ?? 10;
 	const chartType = config.chartType ?? 'list';
 
@@ -28,6 +30,8 @@ export function renderRankingWidget(params: {
 		el.createDiv({ text: 'No data for this field.', cls: 'dash-widget-empty' });
 		return;
 	}
+
+	const colors = generatePalette(collectionColor, ranked.length, colorTheme);
 
 	if (chartType === 'list') {
 		const maxVal = ranked[0]?.[1] ?? 1;
@@ -50,7 +54,7 @@ export function renderRankingWidget(params: {
 			const barFill = barTrack.createDiv('dash-ranking-bar-fill');
 			barFill.setCssStyles({
 				width: `${pct}%`,
-				backgroundColor: CHART_PALETTE[i % CHART_PALETTE.length],
+				backgroundColor: colors[i] || CHART_PALETTE[i % CHART_PALETTE.length],
 			});
 
 			row.createDiv({ text: formatValue(value), cls: 'dash-ranking-value' });
@@ -63,7 +67,6 @@ export function renderRankingWidget(params: {
 	const gridColor = cssVar('--background-modifier-border') || '#333';
 	const labels = ranked.map(([l]) => l);
 	const values = ranked.map(([, v]) => v);
-	const colors = labels.map((_, i) => CHART_PALETTE[i % CHART_PALETTE.length]);
 
 	const canvas = el.createEl('canvas', { cls: 'dash-canvas' });
 

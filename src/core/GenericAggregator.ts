@@ -160,7 +160,7 @@ export class GenericAggregator {
 				const v = r.fields[field];
 				return typeof v === 'number' ? v : parseFloat(String(v ?? ''));
 			})
-			.filter(v => !isNaN(v) && v > 0);
+			.filter(v => !isNaN(v) && isFinite(v));
 
 		if (!values.length) return { sum: 0, average: 0, min: 0, max: 0, count: 0 };
 
@@ -253,7 +253,7 @@ export class GenericAggregator {
 				const n = typeof v === 'number' ? v : parseFloat(String(v ?? ''));
 				return [r.title, isNaN(n) ? 0 : n] as [string, number];
 			})
-			.filter(([, v]) => v > 0)
+			.filter(([, v]) => isFinite(v))
 			.sort((a, b) => ascending ? a[1] - b[1] : b[1] - a[1])
 			.slice(0, topN);
 	}

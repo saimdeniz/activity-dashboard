@@ -3,12 +3,19 @@ import type { CollectionConfig, DashboardSettings } from '../../types';
 export class DragDropManager {
 	private dragY = -1;
 	private autoScrollRaf: number | null = null;
+	private lastDragTime = 0;
 
 	constructor(private containerEl: HTMLElement) {}
 
 	startAutoScroll(): void {
+		this.lastDragTime = Date.now();
 		if (this.autoScrollRaf) return;
 		const loop = () => {
+			// Automatically stop RAF loop if no drag activity received in 500ms (e.g. drag cancelled/aborted)
+			if (Date.now() - this.lastDragTime > 500) {
+				this.stopAutoScroll();
+				return;
+			}
 			if (this.dragY !== -1) {
 				const rect = this.containerEl.getBoundingClientRect();
 				const threshold = 60; // 60px from the screen edge
@@ -31,6 +38,7 @@ export class DragDropManager {
 
 	setDragY(y: number): void {
 		this.dragY = y;
+		this.lastDragTime = Date.now();
 	}
 
 	/** Attach lightweight drag events to an overview card */
@@ -94,7 +102,7 @@ export class DragDropManager {
 		card: HTMLElement,
 		widgetId: string,
 		col: CollectionConfig,
-		activeMode: 'year' | 'library',
+		activeMode: 'year' | 'library' | 'month',
 		saveQuiet: () => Promise<void>
 	): void {
 		let dragSrcId: string | null = null;
@@ -121,7 +129,11 @@ export class DragDropManager {
 			const srcId = e.dataTransfer?.getData('text/plain') || dragSrcId;
 			if (!srcId || srcId === widgetId) return;
 
-			const activeWidgets = activeMode === 'library' ? (col.libraryWidgets || []) : (col.yearWidgets || []);
+			const activeWidgets = activeMode === 'library'
+				? (col.libraryWidgets || [])
+				: activeMode === 'month'
+					? (col.monthWidgets && col.monthWidgets.length ? col.monthWidgets : (col.yearWidgets || []))
+					: (col.yearWidgets || []);
 			const widgets = [...activeWidgets];
 			const fromIdx = widgets.findIndex(w => w.id === srcId);
 			const toIdx = widgets.findIndex(w => w.id === widgetId);
@@ -132,6 +144,8 @@ export class DragDropManager {
 			
 			if (activeMode === 'library') {
 				col.libraryWidgets = widgets;
+			} else if (activeMode === 'month') {
+				col.monthWidgets = widgets;
 			} else {
 				col.yearWidgets = widgets;
 			}

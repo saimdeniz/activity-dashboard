@@ -31,9 +31,9 @@ export class TableRenderer {
 		// Header
 		const thead = table.createEl('thead');
 		const headRow = thead.createEl('tr');
-		headRow.createEl('th', { text: 'Title' });
-		fields.forEach(f => headRow.createEl('th', { text: f }));
-		headRow.createEl('th', { text: '', cls: 'dash-drilldown-table-th-actions' });
+		headRow.createEl('th', { text: 'Title', attr: { scope: 'col' } });
+		fields.forEach(f => headRow.createEl('th', { text: f, attr: { scope: 'col' } }));
+		headRow.createEl('th', { text: '', cls: 'dash-drilldown-table-th-actions', attr: { scope: 'col' } });
 
 		// Body
 		const tbody = table.createEl('tbody');
@@ -44,11 +44,19 @@ export class TableRenderer {
 		const renderNextBatch = () => {
 			const batch = records.slice(renderedCount, renderedCount + batchSize);
 			for (const rec of batch) {
-				const row = tbody.createEl('tr');
+				const row = tbody.createEl('tr', {
+					cls: 'dash-drilldown-table-row',
+					attr: { tabindex: '0', role: 'button', 'aria-label': `View details for ${rec.title}` }
+				});
 				row.onclick = () => {
 					new NoteDetailModal(app, rec, col, onRecordUpdated, onOpenNote ? () => onOpenNote(rec.filePath) : undefined, onSaveConfig).open();
 				};
-				row.addClass('dash-drilldown-table-row');
+				row.onkeydown = (e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.preventDefault();
+						row.click();
+					}
+				};
 				row.createEl('td', { text: rec.title, cls: 'dash-drilldown-table-title' });
 				for (const key of fields) {
 					const val = rec.fields[key];
