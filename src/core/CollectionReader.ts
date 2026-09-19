@@ -4,7 +4,7 @@ import { extractDate } from '../utils/dateUtils';
 
 
 /** Resolves start and end dates from frontmatter using collection config or standard property names */
-function getRecordDates(fm: Record<string, unknown>, config: CollectionConfig): { dStart: Date | null; dEnd: Date | null } {
+function getRecordDates(fm: Record<string, any>, config: CollectionConfig): { dStart: Date | null; dEnd: Date | null } {
 	let startVal = config.startDateField ? fm[config.startDateField] : undefined;
 	let endVal = config.endDateField ? fm[config.endDateField] : undefined;
 
@@ -63,7 +63,7 @@ export class CollectionReader {
 			// In 'year' or 'month' mode, if the user configured a yearFilterField, skip records
 			// that don't have the required value (e.g. played = true)
 			if ((mode === 'year' || mode === 'month') && config.yearFilterField) {
-				const fv = (fm as Record<string, unknown>)[config.yearFilterField];
+				const fv = fm[config.yearFilterField];
 				if (config.yearFilterValue) {
 					const required = config.yearFilterValue.toLowerCase();
 					const actual = String(fv ?? '').toLowerCase();
@@ -76,7 +76,7 @@ export class CollectionReader {
 
 			// ── Date Filtering & Prorating ─────────────────────────────────────
 			if (mode === 'year' && year !== 'all-time') {
-				const { dStart, dEnd } = getRecordDates(fm as Record<string, unknown>, config);
+				const { dStart, dEnd } = getRecordDates(fm, config);
 
 				if (!dStart && !dEnd) {
 					if (config.startDateField || config.endDateField) continue;
@@ -107,7 +107,7 @@ export class CollectionReader {
 					if (dStart.getUTCFullYear() !== year) continue;
 				}
 			} else if (mode === 'month' && year !== 'all-time' && typeof month === 'number' && month >= 1 && month <= 12) {
-				const { dStart, dEnd } = getRecordDates(fm as Record<string, unknown>, config);
+				const { dStart, dEnd } = getRecordDates(fm, config);
 
 				if (!dStart && !dEnd) {
 					if (config.startDateField || config.endDateField) continue;

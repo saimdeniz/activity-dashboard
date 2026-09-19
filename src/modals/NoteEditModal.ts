@@ -569,8 +569,6 @@ export class NoteEditModal extends Modal {
 
 		try {
 			await this.app.fileManager.processFrontMatter(tfile, (fm: Record<string, unknown>) => {
-				const currentKeysInModal = new Set(this.properties.map(p => p.key));
-
 				// Only remove properties the user explicitly deleted via the trash button
 				for (const existingKey of Object.keys(fm)) {
 					if (this.deletedKeys.has(existingKey)) {
