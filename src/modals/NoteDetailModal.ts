@@ -1,6 +1,6 @@
 import { Modal, App, TFile, Notice, setIcon } from 'obsidian';
 import type { RawRecord, CollectionConfig } from '../types';
-import { getAdaptiveForeground, hexToRgbString, getContrastTextColor } from '../utils/ColorUtils';
+import { applyCollectionTheme } from '../utils/ColorUtils';
 import { resolveImageSrc } from '../dashboard/drilldown/CardRenderer';
 import { NoteEditModal } from './NoteEditModal';
 import { NoteDetailCustomizeModal } from './NoteDetailCustomizeModal';
@@ -38,18 +38,7 @@ export class NoteDetailModal extends Modal {
 		contentEl.empty();
 		contentEl.addClass('dash-note-detail-modal');
 
-		const baseColor = this.col.color || '#818cf8';
-		const isDark = !(typeof activeDocument !== 'undefined' && activeDocument.body ? activeDocument.body : document.body).classList.contains('theme-light');
-		const colFg = getAdaptiveForeground(baseColor, isDark);
-		const colRgb = hexToRgbString(colFg);
-		const colContrast = getContrastTextColor(colFg);
-
-		this.modalEl.setCssProps({
-			'--collection-color': baseColor,
-			'--col-fg': colFg,
-			'--col-rgb': colRgb,
-			'--col-contrast': colContrast,
-		});
+		applyCollectionTheme(this.modalEl, this.col.color || '#818cf8');
 
 		const fields = this.rec.fields;
 
@@ -73,13 +62,8 @@ export class NoteDetailModal extends Modal {
 		const cfgStatusField = this.col.noteDetailConfig?.statusField;
 		let statusKey: string | undefined = undefined;
 
-		if (cfgStatusField === '__none__') {
-			statusKey = undefined;
-		} else if (cfgStatusField && cfgStatusField.trim()) {
+		if (cfgStatusField && cfgStatusField !== '__none__' && cfgStatusField.trim()) {
 			statusKey = cfgStatusField.trim();
-		} else {
-			statusKey = ['status', 'ownership', 'playstate', 'readStatus', 'reading_status', 'state', 'condition']
-				.find(k => !isFieldEmpty(fields[k]));
 		}
 
 		// ── Categorized list properties ───────────────────────────
@@ -99,12 +83,14 @@ export class NoteDetailModal extends Modal {
 		const topbarLeft = topbar.createDiv('ndm-topbar-left');
 		topbarLeft.createEl('h2', { text: this.rec.title, cls: 'ndm-title', attr: { title: this.rec.title } });
 
-		// Metadata badges row beneath title
+		// Metadata badges row beneath title (Configured via Customize Modal)
 		const metaRow = topbarLeft.createDiv('ndm-meta-row');
 		const badges = metaRow.createDiv('ndm-badges');
-		const creator = fields.author || fields.authors || fields.developers || fields.developer
-			|| fields.publishers || fields.publisher || fields.artist || fields.director;
-		if (!isFieldEmpty(creator)) {
+
+		// 1. Creator / Author / Subtitle 1 Badge
+		const creatorField = this.col.noteDetailConfig?.creatorField;
+		if (creatorField && creatorField !== '__none__' && !isFieldEmpty(fields[creatorField])) {
+			const creator = fields[creatorField];
 			const text = Array.isArray(creator) ? String(creator[0] ?? '') : String(creator);
 			if (text.trim()) {
 				const b = badges.createDiv('ndm-badge');
@@ -112,8 +98,11 @@ export class NoteDetailModal extends Modal {
 				b.createSpan({ text: text.trim() });
 			}
 		}
-		const releaseVal = fields.releaseDate || fields.released || fields.year || fields.date || fields.published || fields.publishedFrom;
-		if (!isFieldEmpty(releaseVal)) {
+
+		// 2. Date / Year / Subtitle 2 Badge
+		const dateBadgeField = this.col.noteDetailConfig?.dateBadgeField;
+		if (dateBadgeField && dateBadgeField !== '__none__' && !isFieldEmpty(fields[dateBadgeField])) {
+			const releaseVal = fields[dateBadgeField];
 			const yr = String(releaseVal).slice(0, 4);
 			if (/^\d{4}$/.test(yr)) {
 				const b = badges.createDiv('ndm-badge');
@@ -121,16 +110,14 @@ export class NoteDetailModal extends Modal {
 				b.createSpan({ text: yr });
 			}
 		}
+
+		// 3. Rating Badge
 		const cfgRatingScale = this.col.noteDetailConfig?.ratingScale ?? 'auto';
 		const cfgRatingField = this.col.noteDetailConfig?.ratingField;
 
 		let scoreVal: unknown = undefined;
-		if (cfgRatingField === '__none__' || cfgRatingScale === 'none') {
-			scoreVal = undefined;
-		} else if (cfgRatingField && cfgRatingField.trim()) {
+		if (cfgRatingField && cfgRatingField !== '__none__' && cfgRatingScale !== 'none') {
 			scoreVal = fields[cfgRatingField.trim()];
-		} else {
-			scoreVal = fields.onlineRating ?? fields.rating ?? fields.score ?? fields.puan ?? fields.userRating ?? fields.communityRating;
 		}
 
 		if (cfgRatingScale !== 'none' && !isFieldEmpty(scoreVal)) {
@@ -313,11 +300,8 @@ export class NoteDetailModal extends Modal {
 				const schemaField = (this.col.schema || []).find(s => s.key.toLowerCase() === statusKey.toLowerCase());
 				rawOptions = schemaField?.sampleValues && schemaField.sampleValues.length > 0 ? [...schemaField.sampleValues] : [];
 
-				if (rawOptions.length === 0) {
-					if (/read/i.test(statusKey)) rawOptions = ['Read', 'Reading', 'Want to Read', 'DNF'];
-					else if (/play/i.test(statusKey)) rawOptions = ['Playing', 'Completed', 'Backlog', 'Abandoned'];
-					else if (/owner/i.test(statusKey)) rawOptions = ['Owned', 'Wishlist', 'Subscribed', 'Borrowed'];
-					else if (currentValues.length > 0) rawOptions = [...currentValues];
+				if (rawOptions.length === 0 && currentValues.length > 0) {
+					rawOptions = [...currentValues];
 				}
 			}
 
@@ -423,10 +407,21 @@ export class NoteDetailModal extends Modal {
 			const hlGrid = hlBlock.createDiv('ndm-highlights-grid');
 			highlightFields.forEach(key => {
 				const val = fields[key];
-				const displayVal = typeof val === 'boolean' ? (val ? 'Yes' : 'No') : String(val);
+				let displayVal = typeof val === 'boolean' ? (val ? 'Yes' : 'No') : String(val);
+				let tooltipVal = displayVal;
+
+				if (isMinuteDurationField(key, this.col.noteDetailConfig?.durationFields) && typeof val !== 'boolean') {
+					const num = typeof val === 'number' ? val : parseFloat(String(val));
+					if (!isNaN(num) && num > 0) {
+						const formatted = formatMinutesToHours(num);
+						displayVal = formatted.display;
+						tooltipVal = formatted.tooltip;
+					}
+				}
+
 				const cell = hlGrid.createDiv('ndm-highlight-cell');
 				cell.createDiv({ text: key.toUpperCase(), cls: 'ndm-hl-label' });
-				cell.createDiv({ text: displayVal, cls: 'ndm-hl-val', attr: { title: displayVal } });
+				cell.createDiv({ text: displayVal, cls: 'ndm-hl-val', attr: { title: tooltipVal } });
 			});
 		}
 
@@ -463,6 +458,14 @@ export class NoteDetailModal extends Modal {
 					valEl.createSpan({ text: v ? 'true' : 'false', cls: `ndm-bool ${v ? 'ndm-bool-true' : 'ndm-bool-false'}` });
 				} else if (typeof v === 'string' && /^https?:\/\//i.test(v)) {
 					valEl.createEl('a', { text: v, cls: 'ndm-link', attr: { href: v, target: '_blank', rel: 'noopener noreferrer' } });
+				} else if (isMinuteDurationField(k, this.col.noteDetailConfig?.durationFields) && typeof v !== 'boolean') {
+					const num = typeof v === 'number' ? v : parseFloat(String(v));
+					if (!isNaN(num) && num > 0) {
+						const formatted = formatMinutesToHours(num);
+						valEl.createSpan({ text: `${formatted.display} (${num.toLocaleString()} min)`, attr: { title: formatted.tooltip } });
+					} else {
+						valEl.createSpan({ text: String(v) });
+					}
 				} else {
 					valEl.createSpan({ text: String(v) });
 				}
@@ -599,4 +602,26 @@ export class NoteDetailModal extends Modal {
 	onClose(): void {
 		this.contentEl.empty();
 	}
+}
+
+function isMinuteDurationField(key: string, configuredFields?: string[]): boolean {
+	if (!configuredFields || configuredFields.length === 0) {
+		return false;
+	}
+	const lower = key.toLowerCase().trim();
+	return configuredFields.some(f => f.trim().toLowerCase() === lower);
+}
+
+function formatMinutesToHours(minutes: number): { display: string; tooltip: string } {
+	if (isNaN(minutes) || minutes <= 0) return { display: '0 hrs', tooltip: '0 min' };
+	const hrs = minutes / 60;
+	const hrsFormatted = hrs >= 100 ? (Math.round(hrs * 10) / 10).toFixed(1) : (Math.round(hrs * 100) / 100).toString();
+	let h = Math.floor(minutes / 60);
+	let m = Math.round(minutes % 60);
+	if (m === 60) { h += 1; m = 0; }
+	const timeStr = m > 0 ? `${h}h ${m}m` : `${h}h`;
+	return {
+		display: `${hrsFormatted} hrs`,
+		tooltip: `${minutes.toLocaleString()} min (${timeStr})`
+	};
 }

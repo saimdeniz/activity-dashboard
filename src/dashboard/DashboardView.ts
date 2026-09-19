@@ -249,7 +249,10 @@ export class DashboardView extends ItemView {
 		if (this.flushRaf) window.cancelAnimationFrame(this.flushRaf);
 		this.flushRaf = window.requestAnimationFrame(() => {
 			this.flushRaf = null;
-			if (!this.contentEl.isConnected) return;
+			if (!this.contentEl.isConnected) {
+				this.chartFactoryQueue = [];
+				return;
+			}
 			this.chartFactoryQueue.forEach(fn => {
 				try { fn(); } catch (e) { console.error('[ActivityDashboard] Widget render error:', e); }
 			});

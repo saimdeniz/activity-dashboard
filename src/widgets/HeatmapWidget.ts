@@ -27,10 +27,30 @@ export function renderHeatmapWidget(params: {
 	const { el, records, config, collectionColor, year, month, mode, onDrilldown } = params;
 	const dateField = config.field;
 	const numericField = config.heatmapIntensityField;
+	const rangeOptions = {
+		spreadDateRange: config.spreadDateRange,
+		rangeStartField: config.rangeStartField,
+		rangeEndField: config.rangeEndField,
+	};
 
 	// Collect all available years with records
 	const yearCounts = new Map<number, number>();
 	for (const r of records) {
+		if (config.spreadDateRange) {
+			const sField = config.rangeStartField?.trim() || dateField;
+			const eField = config.rangeEndField?.trim();
+			const dStart = extractDate(r.fields[sField]);
+			const dEnd = eField ? extractDate(r.fields[eField]) : null;
+			if (dStart && dEnd) {
+				const yStart = Math.min(dStart.getUTCFullYear(), dEnd.getUTCFullYear());
+				const yEnd = Math.max(dStart.getUTCFullYear(), dEnd.getUTCFullYear());
+				for (let y = yStart; y <= yEnd; y++) {
+					yearCounts.set(y, (yearCounts.get(y) ?? 0) + 1);
+				}
+				continue;
+			}
+		}
+
 		const d = extractDate(r.fields[dateField]);
 		if (d) {
 			const y = d.getUTCFullYear();
@@ -71,8 +91,27 @@ export function renderHeatmapWidget(params: {
 	const colorL4 = isDark ? `hsl(${h}, ${Math.max(55, s + 15)}%, 74%)` : `hsl(${h}, ${Math.max(60, s + 20)}%, 34%)`;
 
 	const getCellColor = (val: number, max: number): string => {
-		if (val <= 0 || max <= 0) return 'var(--dash-heatmap-empty, var(--background-modifier-border-focus, rgba(255,255,255,0.06)))';
-		const ratio = val / max;
+		if (val <= 0) return 'var(--dash-heatmap-empty, var(--background-modifier-border-focus, rgba(255,255,255,0.06)))';
+
+		if (!numericField) {
+			// Discrete activity count mode: 1 is always L1, 2 is L2, 3 is L3, 4+ is L4
+			if (max <= 4) {
+				if (val <= 1) return colorL1;
+				if (val === 2) return colorL2;
+				if (val === 3) return colorL3;
+				return colorL4;
+			} else {
+				if (val <= 1) return colorL1;
+				const ratio = val / max;
+				if (ratio <= 0.35) return colorL2;
+				if (ratio <= 0.70) return colorL3;
+				return colorL4;
+			}
+		}
+
+		// Numeric intensity mode (e.g. playtime, pages)
+		const effectiveMax = Math.max(max, 1);
+		const ratio = val / effectiveMax;
 		if (ratio <= 0.25) return colorL1;
 		if (ratio <= 0.50) return colorL2;
 		if (ratio <= 0.75) return colorL3;
@@ -83,7 +122,7 @@ export function renderHeatmapWidget(params: {
 
 	// ── Month Mode: Calendar Grid ──────────────────────────────────────────────
 	if (mode === 'month' && typeof month === 'number' && month >= 1 && month <= 12 && typeof activeHeatmapYear === 'number') {
-		renderMonthGrid(container, records, dateField, numericField, activeHeatmapYear, month, getCellColor, onDrilldown);
+		renderMonthGrid(container, records, dateField, numericField, activeHeatmapYear, month, getCellColor, onDrilldown, rangeOptions);
 		return;
 	}
 
@@ -91,7 +130,7 @@ export function renderHeatmapWidget(params: {
 	const renderGrid = (targetYear: number) => {
 		container.empty();
 
-		const data = GenericAggregator.heatmap(records, dateField, numericField, targetYear);
+		const data = GenericAggregator.heatmap(records, dateField, numericField, targetYear, rangeOptions);
 
 		// Header summary row with Year Navigator
 		const summaryRow = container.createDiv('dash-heatmap-summary');
@@ -221,10 +260,11 @@ export function renderHeatmapWidget(params: {
 		const legend = footer.createDiv('dash-heatmap-legend');
 		legend.createSpan({ text: 'Less', cls: 'dash-heatmap-legend-text' });
 
-		const levels = [0, 0.25, 0.5, 0.75, 1.0];
+		const levels = [0, 1, 2, 3, 4];
 		levels.forEach((lvl) => {
 			const swatch = legend.createDiv('dash-heatmap-legend-cell');
-			swatch.setCssStyles({ backgroundColor: getCellColor(lvl > 0 ? (lvl * (data.max || 1)) : 0, data.max || 1) });
+			const testVal = numericField ? (lvl === 0 ? 0 : (lvl / 4) * (data.max || 1)) : lvl;
+			swatch.setCssStyles({ backgroundColor: getCellColor(testVal, data.max || 1) });
 		});
 
 		legend.createSpan({ text: 'More', cls: 'dash-heatmap-legend-text' });
@@ -243,9 +283,14 @@ function renderMonthGrid(
 	month: number, // 1-based
 	getCellColor: (val: number, max: number) => string,
 	onDrilldown?: (filterValue: string | null) => void,
+	rangeOptions?: {
+		spreadDateRange?: boolean;
+		rangeStartField?: string;
+		rangeEndField?: string;
+	},
 ): void {
 	// Compute heatmap data for the specific year
-	const data = GenericAggregator.heatmap(records, dateField, numericField, year);
+	const data = GenericAggregator.heatmap(records, dateField, numericField, year, rangeOptions);
 
 	// Count totals only within the target month
 	const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
@@ -295,7 +340,8 @@ function renderMonthGrid(
 	for (let day = 1; day <= daysInMonth; day++) {
 		const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 		const val = data.daily[dateStr] ?? 0;
-		const bgColor = getCellColor(val, monthMax);
+		const effectiveMax = Math.max(monthMax, data.max || 0);
+		const bgColor = getCellColor(val, effectiveMax);
 
 		const cell = grid.createDiv('dash-heatmap-cal-cell');
 		cell.setCssStyles({ backgroundColor: bgColor });
@@ -332,10 +378,12 @@ function renderMonthGrid(
 	const legend = footer.createDiv('dash-heatmap-legend');
 	legend.createSpan({ text: 'Less', cls: 'dash-heatmap-legend-text' });
 
-	const levels = [0, 0.25, 0.5, 0.75, 1.0];
+	const levels = [0, 1, 2, 3, 4];
+	const effectiveMax = Math.max(monthMax, data.max || 0);
 	levels.forEach((lvl) => {
 		const swatch = legend.createDiv('dash-heatmap-legend-cell');
-		swatch.setCssStyles({ backgroundColor: getCellColor(lvl > 0 ? (lvl * (monthMax || 1)) : 0, monthMax || 1) });
+		const testVal = numericField ? (lvl === 0 ? 0 : (lvl / 4) * (effectiveMax || 1)) : lvl;
+		swatch.setCssStyles({ backgroundColor: getCellColor(testVal, effectiveMax) });
 	});
 
 	legend.createSpan({ text: 'More', cls: 'dash-heatmap-legend-text' });

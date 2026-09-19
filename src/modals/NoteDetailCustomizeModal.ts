@@ -1,13 +1,18 @@
 import { Modal, App, setIcon, Notice } from 'obsidian';
 import type { CollectionConfig, CustomLinkConfig } from '../types';
-import { getAdaptiveForeground, hexToRgbString, getContrastTextColor } from '../utils/ColorUtils';
+import { applyCollectionTheme } from '../utils/ColorUtils';
 
 export class NoteDetailCustomizeModal extends Modal {
 	private selectedHighlights: string[];
 	private selectedStatusField: string;
 	private statusOptionsText: string;
-	private selectedLinksPosition: 'cover' | 'topbar';
+	private selectedCreatorField: string;
+	private selectedDateField: string;
+	private selectedRatingField: string;
 	private selectedRatingScale: 'auto' | '5' | '10' | '100' | 'none';
+	private selectedDurationFields: string[];
+	private durationFieldsText: string;
+	private selectedLinksPosition: 'cover' | 'topbar';
 	private customLinks: CustomLinkConfig[];
 
 	constructor(
@@ -21,8 +26,13 @@ export class NoteDetailCustomizeModal extends Modal {
 		this.selectedHighlights = cfg.highlightFields ? [...cfg.highlightFields] : [];
 		this.selectedStatusField = cfg.statusField ?? '';
 		this.statusOptionsText = cfg.statusOptions ? cfg.statusOptions.join(', ') : '';
-		this.selectedLinksPosition = cfg.linksPosition ?? 'cover';
+		this.selectedCreatorField = cfg.creatorField ?? '';
+		this.selectedDateField = cfg.dateBadgeField ?? '';
+		this.selectedRatingField = cfg.ratingField ?? '';
 		this.selectedRatingScale = (cfg.ratingScale as 'auto' | '5' | '10' | '100' | 'none') ?? 'auto';
+		this.selectedDurationFields = cfg.durationFields ? [...cfg.durationFields] : [];
+		this.durationFieldsText = this.selectedDurationFields.join(', ');
+		this.selectedLinksPosition = cfg.linksPosition ?? 'cover';
 		this.customLinks = cfg.customLinks ? cfg.customLinks.map(l => ({ ...l })) : [];
 	}
 
@@ -34,18 +44,7 @@ export class NoteDetailCustomizeModal extends Modal {
 		contentEl.empty();
 		contentEl.addClass('dash-note-customize-modal');
 
-		const baseColor = this.col.color || '#818cf8';
-		const isDark = !(typeof activeDocument !== 'undefined' && activeDocument.body ? activeDocument.body : document.body).classList.contains('theme-light');
-		const colFg = getAdaptiveForeground(baseColor, isDark);
-		const colRgb = hexToRgbString(colFg);
-		const colContrast = getContrastTextColor(colFg);
-
-		this.modalEl.setCssProps({
-			'--collection-color': baseColor,
-			'--col-fg': colFg,
-			'--col-rgb': colRgb,
-			'--col-contrast': colContrast,
-		});
+		applyCollectionTheme(this.modalEl, this.col.color || '#818cf8');
 
 		// ── Header ────────────────────────────────────────────────
 		const header = contentEl.createDiv('ndm-cust-header');
@@ -55,10 +54,15 @@ export class NoteDetailCustomizeModal extends Modal {
 		headerLeft.createEl('h2', { text: `Customize "${this.col.name}" Detail View`, cls: 'ndm-cust-title' });
 
 		const headerDesc = contentEl.createDiv('ndm-cust-desc');
-		headerDesc.setText('Configure status buttons, highlights, external link titles/icons, and rating.');
+		headerDesc.setText('Configure quick status buttons, subtitle badges, highlight properties, duration units, and external links.');
 
 		// ── Body ──────────────────────────────────────────────────
 		const body = contentEl.createDiv('ndm-cust-body');
+
+		const schemaFieldOptions = [
+			{ value: '', label: '— Disabled (None) —' },
+			...this.col.schema.map(f => ({ value: f.key, label: f.key }))
+		];
 
 		// ── Section 1: Quick Status Buttons ───────────────────────
 		const sec1 = body.createDiv('ndm-cust-section');
@@ -67,36 +71,13 @@ export class NoteDetailCustomizeModal extends Modal {
 		sec1Header.createSpan({ text: 'Quick Status Buttons' });
 
 		sec1.createDiv({
-			text: 'Frontmatter property for toggle buttons (e.g. ownership, readStatus, status).',
+			text: 'Frontmatter property for interactive toggle buttons (e.g. status, ownership, state).',
 			cls: 'ndm-cust-sec-desc'
 		});
-
-		const fieldRow = sec1.createDiv('ndm-cust-input-row');
-		fieldRow.createSpan({ text: 'Property:', cls: 'ndm-cust-label' });
-
-		// Custom dropdown for status property
-		const dropWrap = fieldRow.createDiv('dash-custom-dropdown ndm-cust-dropdown');
-		const dropBtn = dropWrap.createDiv('dash-custom-dropdown-btn');
-		
-		let initialLabel = '— Auto Detect —';
-		if (this.selectedStatusField === '__none__') initialLabel = '— Disabled (None) —';
-		else if (this.selectedStatusField) initialLabel = this.selectedStatusField;
-
-		const dropLabel = dropBtn.createSpan({ text: initialLabel, cls: 'dash-custom-dropdown-label' });
-		const dropArrow = dropBtn.createSpan('dash-custom-dropdown-arrow');
-		setIcon(dropArrow, 'chevron-down');
-		const dropList = dropWrap.createDiv('dash-custom-dropdown-list hidden');
-
-		const statusFieldOptions = [
-			{ value: '', label: '— Auto Detect —' },
-			{ value: '__none__', label: '— Disabled (None) —' },
-			...this.col.schema.map(f => ({ value: f.key, label: f.key }))
-		];
 
 		const optionsRow = sec1.createDiv('ndm-cust-input-row');
 		const optionsLabelRow = optionsRow.createDiv('ndm-cust-counter-row');
 		optionsLabelRow.createSpan({ text: 'Buttons (comma-separated):', cls: 'ndm-cust-label' });
-		
 		const clearButtonsBtn = optionsLabelRow.createEl('button', { cls: 'ndm-cust-reset-btn', text: 'Clear' });
 
 		const optionsInput = optionsRow.createEl('input', {
@@ -114,93 +95,108 @@ export class NoteDetailCustomizeModal extends Modal {
 			this.statusOptionsText = optionsInput.value;
 		};
 
-		const updateOptionsInput = (propKey: string) => {
-			if (propKey === '__none__') {
-				optionsRow.addClass('hidden');
-				this.statusOptionsText = '';
-				optionsInput.value = '';
-				return;
-			}
-			optionsRow.removeClass('hidden');
-
-			if (!propKey) {
-				const defaultField = this.col.schema.find(f => /status|ownership|state|readstatus|condition|stage|priority/i.test(f.key));
-				if (defaultField && defaultField.sampleValues?.length) {
-					const allSamples = defaultField.sampleValues.flatMap(val => 
-						val.includes(',') || val.includes('|') ? val.split(/[,|]/).map(s => s.trim()) : [val.trim()]
-					).filter(Boolean);
-					const uniqueSamples = Array.from(new Set(allSamples));
-					this.statusOptionsText = uniqueSamples.join(', ');
-					optionsInput.value = this.statusOptionsText;
-				} else {
-					this.statusOptionsText = '';
-					optionsInput.value = '';
-				}
-				return;
-			}
-
-			const f = this.col.schema.find(sf => sf.key === propKey);
-			if (f && f.sampleValues && f.sampleValues.length > 0) {
-				const allSamples = f.sampleValues.flatMap(val => 
-					val.includes(',') || val.includes('|') ? val.split(/[,|]/).map(s => s.trim()) : [val.trim()]
-				).filter(Boolean);
-				const uniqueSamples = Array.from(new Set(allSamples));
-				this.statusOptionsText = uniqueSamples.join(', ');
-				optionsInput.value = this.statusOptionsText;
-			} else {
-				this.statusOptionsText = '';
-				optionsInput.value = '';
-			}
-		};
-
-		if (this.selectedStatusField === '__none__') {
+		if (!this.selectedStatusField || this.selectedStatusField === '__none__') {
 			optionsRow.addClass('hidden');
 		}
 
-		statusFieldOptions.forEach(opt => {
-			const item = dropList.createDiv(`dash-custom-dropdown-item ${this.selectedStatusField === opt.value ? 'active' : ''}`);
-			item.setText(opt.label);
-			item.onclick = (e) => {
-				e.stopPropagation();
-				this.selectedStatusField = opt.value;
-				dropLabel.setText(opt.label);
-				dropList.addClass('hidden');
-				dropBtn.removeClass('open');
-				dropList.querySelectorAll('.dash-custom-dropdown-item').forEach(el => el.removeClass('active'));
-				item.addClass('active');
-				updateOptionsInput(opt.value);
-			};
-		});
+		this.createDropdownRow(
+			sec1,
+			'Property:',
+			this.selectedStatusField === '__none__' ? '' : this.selectedStatusField,
+			schemaFieldOptions,
+			(val) => {
+				this.selectedStatusField = val;
+				if (!val) {
+					optionsRow.addClass('hidden');
+					this.statusOptionsText = '';
+					optionsInput.value = '';
+				} else {
+					optionsRow.removeClass('hidden');
+					const sf = this.col.schema.find(f => f.key === val);
+					if (sf?.sampleValues && sf.sampleValues.length > 0 && !this.statusOptionsText) {
+						const allSamples = sf.sampleValues.flatMap(s => 
+							s.includes(',') || s.includes('|') ? s.split(/[,|]/).map(p => p.trim()) : [s.trim()]
+						).filter(Boolean);
+						const unique = Array.from(new Set(allSamples));
+						this.statusOptionsText = unique.join(', ');
+						optionsInput.value = this.statusOptionsText;
+					}
+				}
+			},
+			optionsRow
+		);
 
-		dropBtn.onclick = (e) => {
-			e.stopPropagation();
-			const isOpen = !dropList.hasClass('hidden');
-			if (isOpen) {
-				dropList.addClass('hidden');
-				dropBtn.removeClass('open');
-			} else {
-				dropList.removeClass('hidden');
-				dropBtn.addClass('open');
-			}
-		};
-
-		// ── Section 2: Highlights Grid ────────────────────────────
+		// ── Section 2: Subtitle Badges (Header Info) ──────────────
 		const sec2 = body.createDiv('ndm-cust-section');
 		const sec2Header = sec2.createDiv('ndm-cust-sec-title');
-		setIcon(sec2Header.createSpan('ndm-cust-sec-icon'), 'layout-grid');
-		sec2Header.createSpan({ text: 'Highlights Card Grid' });
+		setIcon(sec2Header.createSpan('ndm-cust-sec-icon'), 'info');
+		sec2Header.createSpan({ text: 'Subtitle Badges (Header Metadata)' });
 
 		sec2.createDiv({
+			text: 'Frontmatter properties to display as compact badges beneath the note title.',
+			cls: 'ndm-cust-sec-desc'
+		});
+
+		// Subtitle 1: Creator / Author / Artist
+		this.createDropdownRow(
+			sec2,
+			'Creator / Author (User icon):',
+			this.selectedCreatorField === '__none__' ? '' : this.selectedCreatorField,
+			schemaFieldOptions,
+			(val) => { this.selectedCreatorField = val; }
+		);
+
+		// Subtitle 2: Date / Year / Released
+		this.createDropdownRow(
+			sec2,
+			'Date / Year (Calendar icon):',
+			this.selectedDateField === '__none__' ? '' : this.selectedDateField,
+			schemaFieldOptions,
+			(val) => { this.selectedDateField = val; }
+		);
+
+		// Subtitle 3: Rating property & scale
+		this.createDropdownRow(
+			sec2,
+			'Rating Property (Star icon):',
+			this.selectedRatingField === '__none__' ? '' : this.selectedRatingField,
+			schemaFieldOptions,
+			(val) => { this.selectedRatingField = val; }
+		);
+
+		const ratingScaleOptions = [
+			{ value: 'auto', label: 'Auto Detect (Default)' },
+			{ value: '5', label: '5-Star Scale (/ 5)' },
+			{ value: '10', label: '10-Point Scale (/ 10)' },
+			{ value: '100', label: '100-Point Scale (/ 100)' },
+			{ value: 'none', label: 'Disabled (Hide Badge)' },
+		];
+
+		this.createDropdownRow(
+			sec2,
+			'Rating Scale:',
+			this.selectedRatingScale,
+			ratingScaleOptions,
+			(val) => { this.selectedRatingScale = val as 'auto' | '5' | '10' | '100' | 'none'; }
+		);
+
+		// ── Section 3: Highlights Grid ────────────────────────────
+		const sec3 = body.createDiv('ndm-cust-section');
+		const sec3Header = sec3.createDiv('ndm-cust-sec-title');
+		setIcon(sec3Header.createSpan('ndm-cust-sec-icon'), 'layout-grid');
+		sec3Header.createSpan({ text: 'Highlights Card Grid' });
+
+		sec3.createDiv({
 			text: 'Select up to 8 key properties to display prominently in the top highlights card.',
 			cls: 'ndm-cust-sec-desc'
 		});
 
-		const counterRow = sec2.createDiv('ndm-cust-counter-row');
+		const counterRow = sec3.createDiv('ndm-cust-counter-row');
 		const counterText = counterRow.createSpan('ndm-cust-counter');
 		
 		const autoDetectBtn = counterRow.createEl('button', {
 			cls: 'ndm-cust-reset-btn',
-			text: 'Reset to Auto-Detect'
+			text: 'Clear Highlights'
 		});
 
 		autoDetectBtn.onclick = () => {
@@ -208,7 +204,7 @@ export class NoteDetailCustomizeModal extends Modal {
 			updateChips();
 		};
 
-		const chipsGrid = sec2.createDiv('ndm-cust-chips-grid');
+		const chipsGrid = sec3.createDiv('ndm-cust-chips-grid');
 
 		const updateChips = () => {
 			chipsGrid.empty();
@@ -253,63 +249,112 @@ export class NoteDetailCustomizeModal extends Modal {
 
 		updateChips();
 
-		// ── Section 3: External Web Links & Custom Titles ─────────
-		const sec3 = body.createDiv('ndm-cust-section');
-		const sec3Header = sec3.createDiv('ndm-cust-sec-title');
-		setIcon(sec3Header.createSpan('ndm-cust-sec-icon'), 'link');
-		sec3Header.createSpan({ text: 'External Links & Custom Titles' });
+		// ── Section 4: Duration Formatting (Minutes to Hours) ─────
+		const sec4 = body.createDiv('ndm-cust-section');
+		const sec4Header = sec4.createDiv('ndm-cust-sec-title');
+		setIcon(sec4Header.createSpan('ndm-cust-sec-icon'), 'clock');
+		sec4Header.createSpan({ text: 'Duration Formatting (Minutes to Hours)' });
 
-		sec3.createDiv({
+		sec4.createDiv({
+			text: 'Select properties containing minutes to format into hours. Click chips to toggle. Unselected fields will display as raw numbers.',
+			cls: 'ndm-cust-sec-desc'
+		});
+
+		const durChipsGrid = sec4.createDiv('ndm-cust-chips-grid');
+
+		const durInputRow = sec4.createDiv('ndm-cust-input-row');
+		const durLabelRow = durInputRow.createDiv('ndm-cust-counter-row');
+		durLabelRow.createSpan({ text: 'Selected Properties (comma-separated):', cls: 'ndm-cust-label' });
+
+		const clearDurBtn = durLabelRow.createEl('button', { cls: 'ndm-cust-reset-btn', text: 'Clear All' });
+
+		const durInput = durInputRow.createEl('input', {
+			cls: 'ndm-cust-text-input',
+			placeholder: 'e.g. playTime, hltbMain, runtime',
+			value: this.durationFieldsText,
+		});
+
+		const updateDurChips = () => {
+			durChipsGrid.empty();
+			// Candidate fields: numeric fields, or all fields if no numeric types defined
+			const candidates = this.col.schema.filter(f => f.type === 'number' || this.selectedDurationFields.includes(f.key));
+			const list = candidates.length > 0 ? candidates : this.col.schema;
+
+			list.forEach(f => {
+				const isSelected = this.selectedDurationFields.some(k => k.toLowerCase() === f.key.toLowerCase());
+				const chip = durChipsGrid.createDiv({
+					cls: `ndm-cust-chip ${isSelected ? 'selected' : ''}`,
+					attr: { title: `${f.key} (${f.type})` }
+				});
+
+				const checkIcon = chip.createSpan('ndm-cust-chip-check');
+				setIcon(checkIcon, isSelected ? 'check-square' : 'square');
+				chip.createSpan({ text: f.key, cls: 'ndm-cust-chip-name' });
+
+				chip.onclick = () => {
+					if (isSelected) {
+						this.selectedDurationFields = this.selectedDurationFields.filter(k => k.toLowerCase() !== f.key.toLowerCase());
+					} else {
+						this.selectedDurationFields.push(f.key);
+					}
+					this.durationFieldsText = this.selectedDurationFields.join(', ');
+					durInput.value = this.durationFieldsText;
+					updateDurChips();
+				};
+			});
+
+			if (list.length === 0) {
+				durChipsGrid.createDiv({
+					text: 'No numeric fields discovered. Enter property names manually below.',
+					cls: 'ndm-cust-empty-notice'
+				});
+			}
+		};
+
+		clearDurBtn.onclick = () => {
+			this.selectedDurationFields = [];
+			this.durationFieldsText = '';
+			durInput.value = '';
+			updateDurChips();
+		};
+
+		durInput.oninput = () => {
+			this.durationFieldsText = durInput.value;
+			this.selectedDurationFields = durInput.value
+				.split(',')
+				.map(s => s.trim())
+				.filter(Boolean);
+			updateDurChips();
+		};
+
+		updateDurChips();
+
+		// ── Section 5: External Web Links & Custom Titles ─────────
+		const sec5 = body.createDiv('ndm-cust-section');
+		const sec5Header = sec5.createDiv('ndm-cust-sec-title');
+		setIcon(sec5Header.createSpan('ndm-cust-sec-icon'), 'link');
+		sec5Header.createSpan({ text: 'External Links & Custom Titles' });
+
+		sec5.createDiv({
 			text: 'Customize link positions and rename generic URL properties with friendly titles and icons.',
 			cls: 'ndm-cust-sec-desc'
 		});
 
-		const linkRow = sec3.createDiv('ndm-cust-input-row');
-		linkRow.createSpan({ text: 'Position:', cls: 'ndm-cust-label' });
-
-		const linkDropWrap = linkRow.createDiv('dash-custom-dropdown ndm-cust-dropdown');
-		const linkDropBtn = linkDropWrap.createDiv('dash-custom-dropdown-btn');
-		const linkDropLabel = linkDropBtn.createSpan({
-			text: this.selectedLinksPosition === 'topbar' ? 'Topbar Dropdown Menu (Links ▾)' : 'Under Cover Image (Default)'
-		});
-		const linkDropArrow = linkDropBtn.createSpan('dash-custom-dropdown-arrow');
-		setIcon(linkDropArrow, 'chevron-down');
-
-		const linkDropList = linkDropWrap.createDiv('dash-custom-dropdown-list hidden');
-
-		const linkOptions: [('cover' | 'topbar'), string][] = [
-			['cover', 'Under Cover Image (Default)'],
-			['topbar', 'Topbar Dropdown Menu (Links ▾)'],
+		const linkOptions: { value: string; label: string }[] = [
+			{ value: 'cover', label: 'Under Cover Image (Default)' },
+			{ value: 'topbar', label: 'Topbar Dropdown Menu (Links ▾)' },
 		];
 
-		linkOptions.forEach(([val, label]) => {
-			const item = linkDropList.createDiv(`dash-custom-dropdown-item ${this.selectedLinksPosition === val ? 'active' : ''}`);
-			item.setText(label);
-			item.onclick = (e) => {
-				e.stopPropagation();
-				this.selectedLinksPosition = val;
-				linkDropLabel.setText(label);
-				linkDropList.addClass('hidden');
-				linkDropBtn.removeClass('open');
-				linkDropList.querySelectorAll('.dash-custom-dropdown-item').forEach(el => el.removeClass('active'));
-				item.addClass('active');
-			};
-		});
+		this.createDropdownRow(
+			sec5,
+			'Position:',
+			this.selectedLinksPosition,
+			linkOptions,
+			(val) => { this.selectedLinksPosition = val as 'cover' | 'topbar'; }
+		);
 
-		linkDropBtn.onclick = (e) => {
-			e.stopPropagation();
-			const isOpen = !linkDropList.hasClass('hidden');
-			if (isOpen) {
-				linkDropList.addClass('hidden');
-				linkDropBtn.removeClass('open');
-			} else {
-				linkDropList.removeClass('hidden');
-				linkDropBtn.addClass('open');
-			}
-		};
-
-		// ── Custom Link Mappings Builder ──
-		const customLinksWrap = sec3.createDiv('ndm-cust-links-builder');
+		// Custom Links Builder
+		const customLinksWrap = sec5.createDiv('ndm-cust-links-builder');
 		const customLinksHeader = customLinksWrap.createDiv('ndm-cust-links-header');
 		customLinksHeader.createSpan({ text: 'Custom Link Titles & Icons:', cls: 'ndm-cust-label' });
 		
@@ -384,73 +429,6 @@ export class NoteDetailCustomizeModal extends Modal {
 
 		renderCustomLinksList();
 
-		// ── Section 4: Rating Scale ───────────────────────────────
-		const sec4 = body.createDiv('ndm-cust-section');
-		const sec4Header = sec4.createDiv('ndm-cust-sec-title');
-		setIcon(sec4Header.createSpan('ndm-cust-sec-icon'), 'star');
-		sec4Header.createSpan({ text: 'Rating System' });
-
-		sec4.createDiv({
-			text: 'Rating scale format for the header star badge.',
-			cls: 'ndm-cust-sec-desc'
-		});
-
-		const ratingRow = sec4.createDiv('ndm-cust-input-row');
-		ratingRow.createSpan({ text: 'Scale:', cls: 'ndm-cust-label' });
-
-		const ratingDropWrap = ratingRow.createDiv('dash-custom-dropdown ndm-cust-dropdown');
-		const ratingDropBtn = ratingDropWrap.createDiv('dash-custom-dropdown-btn');
-		
-		const ratingLabels: Record<string, string> = {
-			'auto': 'Auto Detect (Default)',
-			'5': '5-Star Scale (/ 5)',
-			'10': '10-Point Scale (/ 10)',
-			'100': '100-Point Scale (/ 100)',
-			'none': 'Disabled (Hide Badge)',
-		};
-
-		const ratingDropLabel = ratingDropBtn.createSpan({
-			text: ratingLabels[this.selectedRatingScale] || 'Auto Detect (Default)'
-		});
-		const ratingDropArrow = ratingDropBtn.createSpan('dash-custom-dropdown-arrow');
-		setIcon(ratingDropArrow, 'chevron-down');
-
-		const ratingDropList = ratingDropWrap.createDiv('dash-custom-dropdown-list hidden');
-
-		const ratingOptions: [('auto' | '5' | '10' | '100' | 'none'), string][] = [
-			['auto', 'Auto Detect (Default)'],
-			['5', '5-Star Scale (/ 5)'],
-			['10', '10-Point Scale (/ 10)'],
-			['100', '100-Point Scale (/ 100)'],
-			['none', 'Disabled (Hide Badge)'],
-		];
-
-		ratingOptions.forEach(([val, label]) => {
-			const item = ratingDropList.createDiv(`dash-custom-dropdown-item ${this.selectedRatingScale === val ? 'active' : ''}`);
-			item.setText(label);
-			item.onclick = (e) => {
-				e.stopPropagation();
-				this.selectedRatingScale = val;
-				ratingDropLabel.setText(label);
-				ratingDropList.addClass('hidden');
-				ratingDropBtn.removeClass('open');
-				ratingDropList.querySelectorAll('.dash-custom-dropdown-item').forEach(el => el.removeClass('active'));
-				item.addClass('active');
-			};
-		});
-
-		ratingDropBtn.onclick = (e) => {
-			e.stopPropagation();
-			const isOpen = !ratingDropList.hasClass('hidden');
-			if (isOpen) {
-				ratingDropList.addClass('hidden');
-				ratingDropBtn.removeClass('open');
-			} else {
-				ratingDropList.removeClass('hidden');
-				ratingDropBtn.addClass('open');
-			}
-		};
-
 		// ── Footer ────────────────────────────────────────────────
 		const footer = contentEl.createDiv('ndm-cust-footer');
 
@@ -472,9 +450,13 @@ export class NoteDetailCustomizeModal extends Modal {
 				.filter(Boolean);
 
 			cfg.statusOptions = parsedOptions.length > 0 ? parsedOptions : undefined;
-			cfg.highlightFields = this.selectedHighlights.length > 0 ? this.selectedHighlights : undefined;
-			cfg.linksPosition = this.selectedLinksPosition;
+			cfg.creatorField = this.selectedCreatorField || undefined;
+			cfg.dateBadgeField = this.selectedDateField || undefined;
+			cfg.ratingField = this.selectedRatingField || undefined;
 			cfg.ratingScale = this.selectedRatingScale;
+			cfg.highlightFields = this.selectedHighlights.length > 0 ? this.selectedHighlights : undefined;
+			cfg.durationFields = this.selectedDurationFields.length > 0 ? this.selectedDurationFields : undefined;
+			cfg.linksPosition = this.selectedLinksPosition;
 			cfg.customLinks = this.customLinks
 				.filter(cl => cl.fieldKey && cl.fieldKey.trim() && cl.label && cl.label.trim())
 				.map(cl => ({
@@ -491,6 +473,64 @@ export class NoteDetailCustomizeModal extends Modal {
 			} catch (err) {
 				new Notice(`Failed to save settings: ${String(err)}`);
 			}
+		};
+	}
+
+	private createDropdownRow(
+		parent: HTMLElement,
+		label: string,
+		currentValue: string,
+		options: { value: string; label: string }[],
+		onChange: (value: string) => void,
+		insertBeforeTarget?: HTMLElement
+	): { row: HTMLElement; updateLabel: (text: string) => void } {
+		const row = parent.createDiv('ndm-cust-input-row');
+		if (insertBeforeTarget && insertBeforeTarget.parentElement === parent) {
+			parent.insertBefore(row, insertBeforeTarget);
+		}
+		row.createSpan({ text: label, cls: 'ndm-cust-label' });
+
+		const dropWrap = row.createDiv('dash-custom-dropdown ndm-cust-dropdown');
+		const dropBtn = dropWrap.createDiv('dash-custom-dropdown-btn');
+
+		const currentOpt = options.find(o => o.value === currentValue);
+		const initialText = currentOpt ? currentOpt.label : (currentValue || '— Disabled (None) —');
+		const dropLabel = dropBtn.createSpan({ text: initialText, cls: 'dash-custom-dropdown-label' });
+		const dropArrow = dropBtn.createSpan('dash-custom-dropdown-arrow');
+		setIcon(dropArrow, 'chevron-down');
+		const dropList = dropWrap.createDiv('dash-custom-dropdown-list hidden');
+
+		options.forEach(opt => {
+			const item = dropList.createDiv(`dash-custom-dropdown-item ${currentValue === opt.value ? 'active' : ''}`);
+			item.setText(opt.label);
+			item.onclick = (e) => {
+				e.stopPropagation();
+				dropLabel.setText(opt.label);
+				dropList.addClass('hidden');
+				dropBtn.removeClass('open');
+				dropList.querySelectorAll('.dash-custom-dropdown-item').forEach(el => el.removeClass('active'));
+				item.addClass('active');
+				onChange(opt.value);
+			};
+		});
+
+		dropBtn.onclick = (e) => {
+			e.stopPropagation();
+			const isOpen = !dropList.hasClass('hidden');
+			if (isOpen) {
+				dropList.addClass('hidden');
+				dropBtn.removeClass('open');
+			} else {
+				this.containerEl.querySelectorAll('.dash-custom-dropdown-list').forEach(l => l.addClass('hidden'));
+				this.containerEl.querySelectorAll('.dash-custom-dropdown-btn').forEach(b => b.removeClass('open'));
+				dropList.removeClass('hidden');
+				dropBtn.addClass('open');
+			}
+		};
+
+		return {
+			row,
+			updateLabel: (txt: string) => dropLabel.setText(txt)
 		};
 	}
 

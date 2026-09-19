@@ -43,7 +43,7 @@ export class SchemaScanner {
 				type,
 				sampleValues: this.extractSamples(values, type),
 				// Coverage = fraction of files with a *non-empty* value for this field
-				coverage: values.filter(v => v !== null && v !== undefined && v !== '').length / total,
+				coverage: values.filter(v => v !== null && v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0)).length / total,
 			});
 		}
 

@@ -1,7 +1,7 @@
-import { Modal, App, Notice, setIcon } from 'obsidian';
+import { Modal, App, setIcon, Notice } from 'obsidian';
 import type { CollectionConfig, WidgetConfig, WidgetType, ChartType, AggregationType } from '../types';
 import { migrateSize } from '../types';
-import { getAdaptiveForeground, hexToRgbString, getContrastTextColor } from '../utils/ColorUtils';
+import { applyCollectionTheme } from '../utils/ColorUtils';
 
 export class AddWidgetModal extends Modal {
 	private collection: CollectionConfig;
@@ -23,17 +23,7 @@ export class AddWidgetModal extends Modal {
 
 	onOpen(): void {
 		this.modalEl.addClass('dash-modal-dialog');
-		const isDark = activeDocument?.body?.classList.contains('theme-light') ? false : true;
-		const colFg = getAdaptiveForeground(this.collection.color || '#818cf8', isDark);
-		const colRgb = hexToRgbString(colFg);
-		const contrastText = getContrastTextColor(colFg);
-
-		this.modalEl.setCssProps({
-			'--collection-color': this.collection.color || '#818cf8',
-			'--col-fg': colFg,
-			'--col-rgb': colRgb,
-			'--col-contrast': contrastText,
-		});
+		const { colFg } = applyCollectionTheme(this.modalEl, this.collection.color || '#818cf8');
 
 		const { contentEl } = this;
 		contentEl.empty();
@@ -134,12 +124,8 @@ export class AddWidgetModal extends Modal {
 				fieldListEl.createDiv({ text: 'No compatible fields found for this widget type', cls: 'dash-field-empty' });
 				return;
 			}
-			if (!shown.find(s => s.key === field)) {
-				field = shown[0].key;
-				fieldSelectedText.setText(field);
-			} else {
-				fieldSelectedText.setText(field);
-			}
+			// Update display text if current selection is still in shown list; do NOT auto-change field
+			fieldSelectedText.setText(shown.find(s => s.key === field) ? field : (field || shown[0].key));
 			shown.forEach(s => {
 				const item = fieldListEl.createDiv({ cls: `dash-field-item${field === s.key ? ' active' : ''}` });
 				item.createSpan({ text: s.key, cls: 'dash-field-key' });
@@ -262,6 +248,45 @@ export class AddWidgetModal extends Modal {
 			placeholder: 'e.g. pages, minutes, duration',
 			value: e?.heatmapIntensityField ?? '',
 		});
+
+		// ── Date Range Duration Spreading (Heatmap & Activity) ─────
+		const rangeSpreadWrap = contentEl.createDiv('dash-modal-section');
+		this.buildSectionLabel(rangeSpreadWrap, 'Date Range Duration Spreading', 'Distribute multi-day duration across date range instead of a single date');
+		
+		let spreadDateRange = e?.spreadDateRange ?? false;
+
+		const rangeToggleRow = rangeSpreadWrap.createDiv('dash-modal-inputs-row');
+		const toggleBtn = rangeToggleRow.createEl('button', {
+			text: spreadDateRange ? 'Enabled' : 'Disabled',
+			cls: `dash-modal-pill ${spreadDateRange ? 'active' : ''}`,
+			attr: { type: 'button' }
+		});
+
+		const rangeInputsBox = rangeSpreadWrap.createDiv('dash-modal-inputs-row');
+		rangeInputsBox.toggleClass('dash-hidden', !spreadDateRange);
+
+		const rStartWrap = rangeInputsBox.createDiv('dash-modal-input-group dash-modal-input-group--wide');
+		rStartWrap.createDiv({ text: 'Start Date Property', cls: 'dash-modal-input-label' });
+		const rangeStartInput = rStartWrap.createEl('input', {
+			cls: 'dash-modal-input-styled',
+			placeholder: this.collection.startDateField || 'e.g. startDate',
+			value: e?.rangeStartField ?? (this.collection.startDateField || ''),
+		});
+
+		const rEndWrap = rangeInputsBox.createDiv('dash-modal-input-group dash-modal-input-group--wide');
+		rEndWrap.createDiv({ text: 'End Date Property', cls: 'dash-modal-input-label' });
+		const rangeEndInput = rEndWrap.createEl('input', {
+			cls: 'dash-modal-input-styled',
+			placeholder: this.collection.endDateField || 'e.g. endDate',
+			value: e?.rangeEndField ?? (this.collection.endDateField || ''),
+		});
+
+		toggleBtn.onclick = () => {
+			spreadDateRange = !spreadDateRange;
+			toggleBtn.setText(spreadDateRange ? 'Enabled' : 'Disabled');
+			toggleBtn.toggleClass('active', spreadDateRange);
+			rangeInputsBox.toggleClass('dash-hidden', !spreadDateRange);
+		};
 
 		// ── Pre-filter ────────────────────────────────────────────
 		const preFilterWrap = contentEl.createDiv('dash-modal-section');
@@ -402,10 +427,13 @@ export class AddWidgetModal extends Modal {
 			const isChartType = widgetType === 'distribution' || widgetType === 'boolean' || widgetType === 'activity' || widgetType === 'ranking';
 			chartWrap.toggleClass('dash-hidden', !isChartType);
 			aggWrap.toggleClass('dash-hidden', widgetType !== 'number-card' && widgetType !== 'ranking');
+			const isRangeWidget = widgetType === 'heatmap' || widgetType === 'activity' || widgetType === 'number-card';
+			rangeSpreadWrap.toggleClass('dash-hidden', !isRangeWidget);
 			heatmapWrap.toggleClass('dash-hidden', widgetType !== 'heatmap');
 			legendWrap.toggleClass('dash-hidden', !isChartType);
 			preFilterWrap.toggleClass('dash-hidden', widgetType === 'activity' || widgetType === 'heatmap');
-			booleanLabelsWrap.toggleClass('dash-hidden', widgetType !== 'boolean');
+			const isBooleanField = this.collection.schema.find(s => s.key === field)?.type === 'boolean';
+			booleanLabelsWrap.toggleClass('dash-hidden', widgetType !== 'boolean' && !(widgetType === 'distribution' && isBooleanField));
 			const showTopN = widgetType === 'distribution' || widgetType === 'ranking';
 			lWrap.toggleClass('dash-hidden', !showTopN);
 			tWrap.toggleClass('dash-modal-inputs-grid-wide', !showTopN);
@@ -430,6 +458,8 @@ export class AddWidgetModal extends Modal {
 				return;
 			}
 
+			const isRange = widgetType === 'heatmap' || widgetType === 'activity' || widgetType === 'number-card';
+
 			const cfg: WidgetConfig = {
 				id: e?.id ?? uid(),
 				type: widgetType,
@@ -442,12 +472,15 @@ export class AddWidgetModal extends Modal {
 				chartType: (widgetType === 'distribution' || widgetType === 'boolean' || widgetType === 'activity' || widgetType === 'ranking') ? chartType : undefined,
 				legendPosition: (widgetType === 'distribution' || widgetType === 'boolean' || widgetType === 'activity' || widgetType === 'ranking') ? legendPosition : undefined,
 				heatmapIntensityField: widgetType === 'heatmap' ? heatIntensityInput.value.trim() || undefined : undefined,
+				spreadDateRange: isRange ? spreadDateRange : undefined,
+				rangeStartField: isRange && spreadDateRange ? (rangeStartInput.value.trim() || undefined) : undefined,
+				rangeEndField: isRange && spreadDateRange ? (rangeEndInput.value.trim() || undefined) : undefined,
 				size: e ? migrateSize(e.size) : { height: 'small', span: widgetType === 'heatmap' ? 12 : 6 },
 				topN,
 				icon: widgetType === 'number-card' ? selectedIcon : undefined,
 				pinnedToOverview: e?.pinnedToOverview ?? false,
-				trueLabel: widgetType === 'boolean' ? trueLabelInput.value.trim() : undefined,
-				falseLabel: widgetType === 'boolean' ? falseLabelInput.value.trim() : undefined,
+				trueLabel: (widgetType === 'boolean' || widgetType === 'distribution') ? (trueLabelInput.value.trim() || undefined) : undefined,
+				falseLabel: (widgetType === 'boolean' || widgetType === 'distribution') ? (falseLabelInput.value.trim() || undefined) : undefined,
 			};
 			void this.onSave(cfg);
 			this.close();

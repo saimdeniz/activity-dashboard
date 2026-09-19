@@ -125,6 +125,12 @@ class SimpleMathParser {
 	}
 }
 
+export interface DateRangeOptions {
+	spreadDateRange?: boolean;
+	rangeStartField?: string;
+	rangeEndField?: string;
+}
+
 /**
  * GenericAggregator computes statistics from an array of RawRecords
  * for any property key — no type-specific knowledge required.
@@ -285,23 +291,75 @@ export class GenericAggregator {
 	}
 
 	/** Time-series activity from a date field */
-	static activity(records: RawRecord[], dateField: string): ActivityData {
+	static activity(
+		records: RawRecord[],
+		dateField: string,
+		rangeOptions?: DateRangeOptions,
+		targetYear?: number | 'all-time',
+	): ActivityData {
 		const monthly = new Array<number>(12).fill(0);
 		const weekly  = new Array<number>(53).fill(0);
 		const yearly: Record<string, number> = {};
 
+		const startField = rangeOptions?.rangeStartField?.trim() || dateField;
+		const endField = rangeOptions?.rangeEndField?.trim();
+
 		for (const r of records) {
+			if (rangeOptions?.spreadDateRange && (startField || endField)) {
+				const dStart = extractDate(r.fields[startField]);
+				const dEnd = endField ? extractDate(r.fields[endField]) : null;
+
+				if (dStart && dEnd) {
+					const sTime = Math.min(dStart.getTime(), dEnd.getTime());
+					const eTime = Math.max(dStart.getTime(), dEnd.getTime());
+
+					const touchedMonths = new Set<number>();
+					const touchedWeeks = new Set<number>();
+					const touchedYears = new Set<string>();
+
+					const MAX_SPREAD_DAYS = 3650;
+					let iterCount = 0;
+					for (let curr = sTime; curr <= eTime; curr += 86400000) {
+						if (++iterCount > MAX_SPREAD_DAYS) break;
+						const d = new Date(curr);
+						const yr = d.getUTCFullYear();
+						const m = d.getUTCMonth();
+						const w = getISOWeek(d) - 1;
+						const y = String(yr);
+
+						touchedYears.add(y);
+						if (!targetYear || targetYear === 'all-time' || yr === targetYear) {
+							if (m >= 0 && m < 12) touchedMonths.add(m);
+							if (w >= 0 && w < 53) touchedWeeks.add(w);
+						}
+					}
+
+					// Discrete count: each active activity is counted as full +1 for each period it was active in
+					for (const m of touchedMonths) monthly[m]++;
+					for (const w of touchedWeeks) weekly[w]++;
+					for (const y of touchedYears) yearly[y] = (yearly[y] ?? 0) + 1;
+					continue;
+				}
+			}
+
 			const d = extractDate(r.fields[dateField]);
 			if (!d) continue;
 
+			const yr = d.getUTCFullYear();
 			const m = d.getUTCMonth();
 			const w = getISOWeek(d) - 1;
-			const y = String(d.getUTCFullYear());
+			const y = String(yr);
 
-			if (m >= 0 && m < 12) monthly[m]++;
-			if (w >= 0 && w < 53) weekly[w]++;
+			if (!targetYear || targetYear === 'all-time' || yr === targetYear) {
+				if (m >= 0 && m < 12) monthly[m]++;
+				if (w >= 0 && w < 53) weekly[w]++;
+			}
 			yearly[y] = (yearly[y] ?? 0) + 1;
 		}
+
+		for (let i = 0; i < 12; i++) monthly[i] = Math.round(monthly[i]);
+		for (let i = 0; i < 53; i++) weekly[i] = Math.round(weekly[i]);
+		for (const k of Object.keys(yearly)) yearly[k] = Math.round(yearly[k]);
 
 		return { monthly, weekly, yearly };
 	}
@@ -312,12 +370,65 @@ export class GenericAggregator {
 		dateField: string,
 		numericField?: string,
 		targetYear?: number | 'all-time',
+		rangeOptions?: DateRangeOptions,
 	): HeatmapData {
 		const daily: Record<string, number> = {};
 		let total = 0;
 		let max = 0;
 
+		const startField = rangeOptions?.rangeStartField?.trim() || dateField;
+		const endField = rangeOptions?.rangeEndField?.trim();
+
 		for (const r of records) {
+			let val = 1;
+			if (numericField) {
+				val = toNumber(r.fields[numericField], 0);
+			}
+			if (val <= 0) continue;
+
+			if (rangeOptions?.spreadDateRange && (startField || endField)) {
+				const dStart = extractDate(r.fields[startField]);
+				const dEnd = endField ? extractDate(r.fields[endField]) : null;
+
+				if (dStart && dEnd) {
+					const sTime = Math.min(dStart.getTime(), dEnd.getTime());
+					const eTime = Math.max(dStart.getTime(), dEnd.getTime());
+					const totalMs = eTime - sTime;
+					const totalDays = Math.max(1, Math.round(totalMs / 86400000) + 1);
+
+					if (totalDays > 1) {
+						const dailyVal = numericField ? (val / totalDays) : 1;
+
+						let overlapStart = sTime;
+						let overlapEnd = eTime;
+
+						if (targetYear && targetYear !== 'all-time') {
+							const yearStart = Date.UTC(targetYear, 0, 1);
+							const yearEnd = Date.UTC(targetYear, 11, 31);
+							overlapStart = Math.max(sTime, yearStart);
+							overlapEnd = Math.min(eTime, yearEnd);
+						}
+
+						if (overlapStart <= overlapEnd) {
+							const MAX_SPREAD_DAYS = 3650;
+							let iterCount = 0;
+							for (let curr = overlapStart; curr <= overlapEnd; curr += 86400000) {
+								if (++iterCount > MAX_SPREAD_DAYS) break;
+								const d = new Date(curr);
+								const dateStr = formatDateUTC(d);
+								const current = (daily[dateStr] ?? 0) + dailyVal;
+								daily[dateStr] = current;
+								total += dailyVal;
+								if (daily[dateStr] > max) {
+									max = daily[dateStr];
+								}
+							}
+						}
+						continue;
+					}
+				}
+			}
+
 			const d = extractDate(r.fields[dateField]);
 			if (!d) continue;
 
@@ -326,19 +437,16 @@ export class GenericAggregator {
 			}
 
 			const dateStr = formatDateUTC(d);
-			let val = 1;
-			if (numericField) {
-				val = toNumber(r.fields[numericField], 0);
+			const current = (daily[dateStr] ?? 0) + val;
+			daily[dateStr] = Math.round(current * 100) / 100;
+			total += val;
+			if (daily[dateStr] > max) {
+				max = daily[dateStr];
 			}
+		}
 
-			if (val > 0) {
-				const current = (daily[dateStr] ?? 0) + val;
-				daily[dateStr] = Math.round(current * 100) / 100;
-				total += val;
-				if (daily[dateStr] > max) {
-					max = daily[dateStr];
-				}
-			}
+		for (const k of Object.keys(daily)) {
+			daily[k] = Math.round(daily[k] * 100) / 100;
 		}
 
 		return {

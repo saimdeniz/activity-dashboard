@@ -2,15 +2,29 @@ import type { App, TFile } from 'obsidian';
 import type { CollectionConfig, RawRecord } from '../types';
 import { extractDate } from '../utils/dateUtils';
 
-/** Determines whether a numeric field represents a cumulative metric that should be prorated. */
-function shouldProrateField(key: string): boolean {
-	const lower = key.toLowerCase();
-	const staticTerms = ['rating', 'score', 'year', 'date', 'id', 'season', 'price', 'cost', 'rank', 'index', 'version', 'uid'];
-	if (staticTerms.some(term => lower.includes(term))) {
-		return false;
+
+/** Resolves start and end dates from frontmatter using collection config or standard property names */
+function getRecordDates(fm: Record<string, unknown>, config: CollectionConfig): { dStart: Date | null; dEnd: Date | null } {
+	let startVal = config.startDateField ? fm[config.startDateField] : undefined;
+	let endVal = config.endDateField ? fm[config.endDateField] : undefined;
+
+	if (startVal === undefined) {
+		startVal = fm.startDate ?? fm.started ?? fm.firstPlayed ?? fm.start_date;
 	}
-	const cumulativeTerms = ['playtime', 'play-time', 'hours', 'pages', 'episodes', 'chapters', 'progress', 'duration', 'time', 'count', 'amount'];
-	return cumulativeTerms.some(term => lower.includes(term));
+	if (endVal === undefined) {
+		endVal = fm.endDate ?? fm.finished ?? fm.lastPlayed ?? fm.end_date;
+	}
+
+	const dStart = startVal ? extractDate(startVal) : null;
+	const dEnd = endVal ? extractDate(endVal) : null;
+
+	if (!dStart && !dEnd) {
+		const singleVal = fm.date ?? fm.completed ?? fm.released;
+		const dSingle = singleVal ? extractDate(singleVal) : null;
+		return { dStart: dSingle, dEnd: dSingle };
+	}
+
+	return { dStart, dEnd };
 }
 
 /**
@@ -62,82 +76,67 @@ export class CollectionReader {
 
 			// ── Date Filtering & Prorating ─────────────────────────────────────
 			if (mode === 'year' && year !== 'all-time') {
-				const startVal = config.startDateField ? (fm as Record<string, unknown>)[config.startDateField] : null;
-				const endVal = config.endDateField ? (fm as Record<string, unknown>)[config.endDateField] : null;
+				const { dStart, dEnd } = getRecordDates(fm as Record<string, unknown>, config);
 
-				const dStart = startVal ? extractDate(startVal) : null;
-				const dEnd = endVal ? extractDate(endVal) : null;
-
-				// Core rule: In a specific 'year' view, if endDateField is configured,
-				// records MUST have an end date (be "finished").
-				if (config.endDateField && !dEnd) continue;
-
-				if (dStart && dEnd) {
-					// Both dates exist -> calculate percentage of days falling into the target year
-					const totalMs = dEnd.getTime() - dStart.getTime();
+				if (!dStart && !dEnd) {
+					if (config.startDateField || config.endDateField) continue;
+				} else if (dStart && dEnd) {
+					const sTime = Math.min(dStart.getTime(), dEnd.getTime());
+					const eTime = Math.max(dStart.getTime(), dEnd.getTime());
+					const totalMs = eTime - sTime;
 					const totalDays = Math.max(1, Math.round(totalMs / 86400000) + 1);
 
 					const yearStart = Date.UTC(year, 0, 1);
 					const yearEnd = Date.UTC(year, 11, 31);
 
-					const overlapStart = Math.max(dStart.getTime(), yearStart);
-					const overlapEnd = Math.min(dEnd.getTime(), yearEnd);
+					const overlapStart = Math.max(sTime, yearStart);
+					const overlapEnd = Math.min(eTime, yearEnd);
 
 					if (overlapStart > overlapEnd) {
 						continue; // Finished or started outside this year entirely
 					}
 
-					const overlapMs = overlapEnd - overlapStart;
-					const overlapDays = Math.max(1, Math.round(overlapMs / 86400000) + 1);
-
-					prorationFactor = Math.min(1, overlapDays / totalDays);
-
+					if (totalDays > 1) {
+						const overlapMs = overlapEnd - overlapStart;
+						const overlapDays = Math.max(1, Math.round(overlapMs / 86400000) + 1);
+						prorationFactor = Math.min(1, overlapDays / totalDays);
+					}
 				} else if (dEnd) {
-					// Only end date -> exact match required
 					if (dEnd.getUTCFullYear() !== year) continue;
 				} else if (dStart) {
-					// Only start date -> exact match required
 					if (dStart.getUTCFullYear() !== year) continue;
-				} else if (config.startDateField || config.endDateField) {
-					// At least one date field is tracked, but this record has neither.
-					continue;
 				}
 			} else if (mode === 'month' && year !== 'all-time' && typeof month === 'number' && month >= 1 && month <= 12) {
-				const startVal = config.startDateField ? (fm as Record<string, unknown>)[config.startDateField] : null;
-				const endVal = config.endDateField ? (fm as Record<string, unknown>)[config.endDateField] : null;
+				const { dStart, dEnd } = getRecordDates(fm as Record<string, unknown>, config);
 
-				const dStart = startVal ? extractDate(startVal) : null;
-				const dEnd = endVal ? extractDate(endVal) : null;
-
-				// Core rule: In month view, if endDateField is configured, record must have an end date
-				if (config.endDateField && !dEnd) continue;
-
-				if (dStart && dEnd) {
-					const totalMs = dEnd.getTime() - dStart.getTime();
+				if (!dStart && !dEnd) {
+					if (config.startDateField || config.endDateField) continue;
+				} else if (dStart && dEnd) {
+					const sTime = Math.min(dStart.getTime(), dEnd.getTime());
+					const eTime = Math.max(dStart.getTime(), dEnd.getTime());
+					const totalMs = eTime - sTime;
 					const totalDays = Math.max(1, Math.round(totalMs / 86400000) + 1);
 
 					const monthStart = Date.UTC(year, month - 1, 1);
-					// Last day of month at midnight: Date.UTC(year, month, 0) = last day of previous month
 					const lastDayOfMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
 					const monthEnd = Date.UTC(year, month - 1, lastDayOfMonth);
 
-					const overlapStart = Math.max(dStart.getTime(), monthStart);
-					const overlapEnd = Math.min(dEnd.getTime(), monthEnd);
+					const overlapStart = Math.max(sTime, monthStart);
+					const overlapEnd = Math.min(eTime, monthEnd);
 
 					if (overlapStart > overlapEnd) {
 						continue; // Outside this month entirely
 					}
 
-					const overlapMs = overlapEnd - overlapStart;
-					const overlapDays = Math.max(1, Math.round(overlapMs / 86400000) + 1);
-
-					prorationFactor = Math.min(1, overlapDays / totalDays);
+					if (totalDays > 1) {
+						const overlapMs = overlapEnd - overlapStart;
+						const overlapDays = Math.max(1, Math.round(overlapMs / 86400000) + 1);
+						prorationFactor = Math.min(1, overlapDays / totalDays);
+					}
 				} else if (dEnd) {
 					if (dEnd.getUTCFullYear() !== year || (dEnd.getUTCMonth() + 1) !== month) continue;
 				} else if (dStart) {
 					if (dStart.getUTCFullYear() !== year || (dStart.getUTCMonth() + 1) !== month) continue;
-				} else if (config.startDateField || config.endDateField) {
-					continue;
 				}
 			}
 
@@ -145,19 +144,14 @@ export class CollectionReader {
 			const fields: Record<string, unknown> = {};
 			for (const [k, v] of Object.entries(fm)) {
 				if (k === 'position') continue;
-
-				// Apply prorating only to cumulative numeric values
-				if (prorationFactor < 1 && typeof v === 'number' && shouldProrateField(k)) {
-					fields[k] = Math.round((v * prorationFactor) * 100) / 100;
-				} else {
-					fields[k] = v;
-				}
+				fields[k] = v;
 			}
 
 			records.push({
 				filePath: file.path,
 				title: String(fm.title ?? file.basename).trim(),
 				fields,
+				prorationFactor: prorationFactor < 1 ? prorationFactor : undefined,
 			});
 		}
 

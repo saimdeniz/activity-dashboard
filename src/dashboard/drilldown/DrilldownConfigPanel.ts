@@ -9,7 +9,7 @@ export class DrilldownConfigPanel {
 		onSaveQuiet: () => Promise<void>,
 		onChange: () => void,
 		app?: App
-	): void {
+	): () => void {
 		panel.empty();
 		if (!col.drilldownConfig) {
 			col.drilldownConfig = {
@@ -193,6 +193,11 @@ export class DrilldownConfigPanel {
 			if (appInstance) {
 				new NoteDetailCustomizeModal(appInstance, col, onSaveQuiet, onChange).open();
 			}
+		};
+
+		// Return cleanup to allow callers to remove any lingering document listeners
+		return () => {
+			doc.removeEventListener('click', closeDropdown);
 		};
 	}
 }

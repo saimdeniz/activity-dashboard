@@ -1,22 +1,10 @@
-﻿import { Modal, App, Notice, setIcon } from 'obsidian';
+import { Modal, App, Notice, setIcon } from 'obsidian';
 import type { OverviewItem, WidgetSize, ChartType } from '../types';
 import { migrateSize } from '../types';
-import { getAdaptiveForeground, hexToRgbString, getContrastTextColor } from '../utils/ColorUtils';
+import { applyCollectionTheme } from '../utils/ColorUtils';
 
 function applyOverviewModalTheme(modalEl: HTMLElement) {
-	const baseColor = '#f97316';
-	const isDark = !(typeof activeDocument !== 'undefined' && activeDocument.body ? activeDocument.body : document.body).classList.contains('theme-light');
-	const colFg = getAdaptiveForeground(baseColor, isDark);
-	const colRgb = hexToRgbString(colFg);
-	const colContrast = getContrastTextColor(colFg);
-
-	modalEl.setCssProps({
-		'--collection-color': baseColor,
-		'--col-fg': colFg,
-		'--col-rgb': colRgb,
-		'--col-contrast': colContrast,
-	});
-	return { colFg };
+	return applyCollectionTheme(modalEl, '#f97316');
 }
 
 export class AddOverviewWidgetModal extends Modal {

@@ -38,6 +38,11 @@ export function attachResizeHandles(
 		const curSpan = currentSize.span;
 
 		const onMove = (mv: MouseEvent) => {
+			if (!card.isConnected) {
+				activeDocument.removeEventListener('mousemove', onMove);
+				activeDocument.removeEventListener('mouseup', onUp);
+				return;
+			}
 			const dx = mv.clientX - startX;
 			const targetCols = Math.round(curSpan + dx / colWidth);
 			const snapped = SPANS.reduce((prev, cur) =>
@@ -83,6 +88,11 @@ export function attachResizeHandles(
 		const curSpan = currentSize.span;
 
 		const onTouchMove = (mv: TouchEvent) => {
+			if (!card.isConnected) {
+				activeDocument.removeEventListener('touchmove', onTouchMove);
+				activeDocument.removeEventListener('touchend', onTouchEnd);
+				return;
+			}
 			if (mv.touches.length !== 1) return;
 			const dx = mv.touches[0].clientX - startX;
 			const targetCols = Math.round(curSpan + dx / colWidth);
@@ -131,6 +141,11 @@ export function attachResizeHandles(
 		const initialHeight = currentSize.height;
 
 		const onMove = (mv: MouseEvent) => {
+			if (!card.isConnected) {
+				activeDocument.removeEventListener('mousemove', onMove);
+				activeDocument.removeEventListener('mouseup', onUp);
+				return;
+			}
 			const dy = mv.clientY - startY;
 			let targetHeight = initialHeight;
 			if (initialHeight === 'mini' && dy > 40) targetHeight = 'small';
@@ -187,6 +202,11 @@ export function attachResizeHandles(
 		const initialHeight = currentSize.height;
 
 		const onTouchMove = (mv: TouchEvent) => {
+			if (!card.isConnected) {
+				activeDocument.removeEventListener('touchmove', onTouchMove);
+				activeDocument.removeEventListener('touchend', onTouchEnd);
+				return;
+			}
 			if (mv.touches.length !== 1) return;
 			const dy = mv.touches[0].clientY - startY;
 			let targetHeight = initialHeight;

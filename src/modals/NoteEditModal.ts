@@ -1,6 +1,6 @@
 import { Modal, App, TFile, Notice, setIcon } from 'obsidian';
 import type { RawRecord, CollectionConfig } from '../types';
-import { getAdaptiveForeground, hexToRgbString, getContrastTextColor } from '../utils/ColorUtils';
+import { applyCollectionTheme } from '../utils/ColorUtils';
 import { resolveImageSrc } from '../dashboard/drilldown/CardRenderer';
 
 export type PropertyType = 'text' | 'list' | 'number' | 'checkbox' | 'date' | 'rating';
@@ -16,6 +16,7 @@ export class NoteEditModal extends Modal {
 	private properties: PropertyFieldItem[] = [];
 	private activeTypeMenuCleanups: (() => void)[] = [];
 	private pinnedKeys: Set<string> = new Set();
+	private deletedKeys: Set<string> = new Set();
 
 	constructor(
 		app: App,
@@ -116,18 +117,7 @@ export class NoteEditModal extends Modal {
 		contentEl.empty();
 		contentEl.addClass('dash-modern-modal');
 
-		const baseColor = this.col.color || '#818cf8';
-		const isDark = !(typeof activeDocument !== 'undefined' && activeDocument.body ? activeDocument.body : document.body).classList.contains('theme-light');
-		const colFg = getAdaptiveForeground(baseColor, isDark);
-		const colRgb = hexToRgbString(colFg);
-		const colContrast = getContrastTextColor(colFg);
-
-		this.modalEl.setCssProps({
-			'--collection-color': baseColor,
-			'--col-fg': colFg,
-			'--col-rgb': colRgb,
-			'--col-contrast': colContrast,
-		});
+		applyCollectionTheme(this.modalEl, this.col.color || '#818cf8');
 
 		// ── Header ──────────────────────────────────────────────
 		const headerWrap = contentEl.createDiv('dash-note-edit-header');
@@ -325,6 +315,7 @@ export class NoteEditModal extends Modal {
 			e.stopPropagation();
 			const idx = this.properties.indexOf(prop);
 			if (idx !== -1) {
+				this.deletedKeys.add(prop.key);
 				this.properties.splice(idx, 1);
 				this.pinnedKeys.delete(prop.key);
 				this.renderPropertiesList(body);
@@ -580,9 +571,9 @@ export class NoteEditModal extends Modal {
 			await this.app.fileManager.processFrontMatter(tfile, (fm: Record<string, unknown>) => {
 				const currentKeysInModal = new Set(this.properties.map(p => p.key));
 
-				// Remove properties that were deleted in the modal
+				// Only remove properties the user explicitly deleted via the trash button
 				for (const existingKey of Object.keys(fm)) {
-					if (!existingKey.startsWith('_') && existingKey !== 'position' && !currentKeysInModal.has(existingKey)) {
+					if (this.deletedKeys.has(existingKey)) {
 						delete fm[existingKey];
 					}
 				}

@@ -16,9 +16,33 @@ export function renderNumberCardWidget(params: {
 	const { el, records, config, onDrilldown } = params;
 	const agg = config.aggregation ?? 'count';
 
+	let evalRecords = records;
+	if (config.spreadDateRange) {
+		evalRecords = records.map(r => {
+			if (!r.prorationFactor || r.prorationFactor >= 1) return r;
+			const scaledFields = { ...r.fields };
+			const rawVal = r.fields[config.field];
+			if (typeof rawVal === 'number') {
+				scaledFields[config.field] = Math.round((rawVal * r.prorationFactor) * 100) / 100;
+			}
+			return { ...r, fields: scaledFields };
+		});
+	}
+
 	const summary = agg === 'formula' && config.mathExpression 
-		? GenericAggregator.formulaSummary(records, config.mathExpression)
-		: GenericAggregator.numericSummary(records, config.field);
+		? (config.spreadDateRange
+			? GenericAggregator.formulaSummary(records.map(r => {
+				if (!r.prorationFactor || r.prorationFactor >= 1) return r;
+				const scaledFields: Record<string, unknown> = { ...r.fields };
+				for (const [k, v] of Object.entries(r.fields)) {
+					if (typeof v === 'number') {
+						scaledFields[k] = Math.round((v * r.prorationFactor) * 100) / 100;
+					}
+				}
+				return { ...r, fields: scaledFields };
+			}), config.mathExpression)
+			: GenericAggregator.formulaSummary(records, config.mathExpression))
+		: GenericAggregator.numericSummary(evalRecords, config.field);
 
 	let value: number;
 	switch (agg) {
@@ -27,7 +51,13 @@ export function renderNumberCardWidget(params: {
 		case 'average': value = summary.average; break;
 		case 'min':     value = summary.min;     break;
 		case 'max':     value = summary.max;     break;
-		default:        value = (!config.field || !config.field.trim()) ? records.length : summary.count;
+		default:
+			if (config.spreadDateRange && (!config.field || !config.field.trim())) {
+				// Prorated count: sum fractional portions of each record that falls in this period
+				value = evalRecords.reduce((acc, r) => acc + (r.prorationFactor ?? 1), 0);
+			} else {
+				value = (!config.field || !config.field.trim()) ? records.length : summary.count;
+			}
 	}
 
 	const aggLabel: Record<string, string> = {

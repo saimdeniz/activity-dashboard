@@ -69,7 +69,7 @@ export function buildScalesConfig(chartType: ChartType | 'bar', textColor: strin
  */
 export function formatValue(n: number, decimals = 1): string {
 	if (isNaN(n) || n === null || n === undefined) return '0';
-	if (n >= 100_000) return `${Math.round(n / 1000)}k`;
+	if (Math.abs(n) >= 100_000) return `${Math.round(n / 1000)}k`;
 	if (Number.isInteger(n)) return String(n);
 	return parseFloat(n.toFixed(decimals)).toString();
 }

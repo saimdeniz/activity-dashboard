@@ -61,7 +61,7 @@ export function hexToHsl(hex: string): { h: number; s: number; l: number } | nul
 			r = parseInt(clean[1] + clean[1], 16);
 			g = parseInt(clean[2] + clean[2], 16);
 			b = parseInt(clean[3] + clean[3], 16);
-		} else if (clean.length >= 7) {
+		} else if (clean.length === 7 || clean.length === 9) {
 			r = parseInt(clean.substring(1, 3), 16);
 			g = parseInt(clean.substring(3, 5), 16);
 			b = parseInt(clean.substring(5, 7), 16);
@@ -125,7 +125,7 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number } {
 			r = parseInt(clean[1] + clean[1], 16);
 			g = parseInt(clean[2] + clean[2], 16);
 			b = parseInt(clean[3] + clean[3], 16);
-		} else if (clean.length >= 7) {
+		} else if (clean.length === 7 || clean.length === 9) {
 			r = parseInt(clean.substring(1, 3), 16);
 			g = parseInt(clean.substring(3, 5), 16);
 			b = parseInt(clean.substring(5, 7), 16);
@@ -192,5 +192,22 @@ export function getAdaptiveForeground(hex: string, isDarkTheme = true): string {
 		}
 	}
 	return hex;
+}
+
+/**
+ * Applies collection theme CSS custom properties to a modal or container element.
+ */
+export function applyCollectionTheme(el: HTMLElement, baseColor: string): { colFg: string; isDark: boolean } {
+	const isDark = !(typeof activeDocument !== 'undefined' && activeDocument.body ? activeDocument.body : document.body).classList.contains('theme-light');
+	const colFg = getAdaptiveForeground(baseColor, isDark);
+	const colRgb = hexToRgbString(colFg);
+	const colContrast = getContrastTextColor(colFg);
+	el.setCssProps({
+		'--collection-color': baseColor,
+		'--col-fg': colFg,
+		'--col-rgb': colRgb,
+		'--col-contrast': colContrast,
+	});
+	return { colFg, isDark };
 }
 

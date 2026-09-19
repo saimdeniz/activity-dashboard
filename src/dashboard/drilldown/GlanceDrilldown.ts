@@ -231,12 +231,14 @@ export class GlanceDrilldown {
 		const configPanel = mainArea.createDiv('dash-glance-config-panel hidden');
 		const contentArea = mainArea.createDiv('dash-glance-content');
 
+		let configPanelCleanup: (() => void) | null = null;
 		configBtn.onclick = () => {
 			if (configPanel.hasClass('hidden')) {
 				configPanel.removeClass('hidden');
 				configBtn.addClass('active');
-				DrilldownConfigPanel.build(configPanel, col, onSaveQuiet, () => renderContent(true), this.app);
+				configPanelCleanup = DrilldownConfigPanel.build(configPanel, col, onSaveQuiet, () => renderContent(true), this.app);
 			} else {
+				if (configPanelCleanup) { configPanelCleanup(); configPanelCleanup = null; }
 				configPanel.addClass('hidden');
 				configBtn.removeClass('active');
 			}
@@ -279,6 +281,22 @@ export class GlanceDrilldown {
 					const val = r.fields[config.field];
 
 					if (config.type === 'heatmap') {
+						if (config.spreadDateRange) {
+							const sField = config.rangeStartField?.trim() || config.field;
+							const eField = config.rangeEndField?.trim();
+							const dStart = extractDate(r.fields[sField]);
+							const dEnd = eField ? extractDate(r.fields[eField]) : null;
+							if (dStart && dEnd) {
+								const sTime = Math.min(dStart.getTime(), dEnd.getTime());
+								const eTime = Math.max(dStart.getTime(), dEnd.getTime());
+								const clickedDate = extractDate(activeTab);
+								if (clickedDate) {
+									const cTime = clickedDate.getTime();
+									if (cTime >= sTime && cTime <= eTime) return true;
+								}
+							}
+						}
+
 						const d = extractDate(val);
 						if (!d) return false;
 						const y = d.getUTCFullYear();
@@ -288,6 +306,34 @@ export class GlanceDrilldown {
 					}
 
 					if (config.type === 'activity') {
+						if (config.spreadDateRange) {
+							const sField = config.rangeStartField?.trim() || config.field;
+							const eField = config.rangeEndField?.trim();
+							const dStart = extractDate(r.fields[sField]);
+							const dEnd = eField ? extractDate(r.fields[eField]) : null;
+							if (dStart && dEnd) {
+								const sTime = Math.min(dStart.getTime(), dEnd.getTime());
+								const eTime = Math.max(dStart.getTime(), dEnd.getTime());
+								if (activityResolution === 'yearly') {
+									const targetY = parseInt(activeTab, 10);
+									if (!isNaN(targetY)) {
+										const yStart = Date.UTC(targetY, 0, 1);
+										const yEnd = Date.UTC(targetY, 11, 31);
+										if (sTime <= yEnd && eTime >= yStart) return true;
+									}
+								} else if (activityResolution === 'monthly') {
+									const mIdx = MONTHS.indexOf(activeTab);
+									if (mIdx !== -1) {
+										const yr = drilldownYear !== 'all-time' ? drilldownYear : new Date(sTime).getUTCFullYear();
+										const mStart = Date.UTC(yr, mIdx, 1);
+										const lastDay = new Date(Date.UTC(yr, mIdx + 1, 0)).getUTCDate();
+										const mEnd = Date.UTC(yr, mIdx, lastDay);
+										if (sTime <= mEnd && eTime >= mStart) return true;
+									}
+								}
+							}
+						}
+
 						const d = extractDate(val);
 						if (!d) return false;
 						if (activityResolution === 'weekly') return `W${String(getISOWeek(d)).padStart(2, '0')}` === activeTab;

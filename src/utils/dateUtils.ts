@@ -42,7 +42,9 @@ export function extractDate(value: unknown): Date | null {
 		
 		const d = new Date(s);
 		if (!isNaN(d.getTime())) {
-			return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+			// Use local getters here: new Date(s) parses in local timezone,
+			// so UTC getters would shift the date backward for UTC+ users.
+			return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
 		}
 	}
 	if (typeof value === 'number' && value >= 1000 && value <= 9999) {
@@ -124,8 +126,8 @@ export function proportionalPlayTime(
 	const effectiveStart = startDate > yearStart ? startDate : yearStart;
 	const effectiveEnd   = endDate   < yearEnd   ? endDate   : yearEnd;
 
-	const totalDays = (endDate.getTime() - startDate.getTime()) / 86_400_000;
-	const daysInYear = (effectiveEnd.getTime() - effectiveStart.getTime()) / 86_400_000;
+	const totalDays = Math.max(1, Math.round((endDate.getTime() - startDate.getTime()) / 86_400_000) + 1);
+	const daysInYear = Math.max(0, Math.round((effectiveEnd.getTime() - effectiveStart.getTime()) / 86_400_000) + 1);
 
 	if (totalDays <= 0 || daysInYear <= 0) return 0;
 

@@ -68,6 +68,9 @@ export interface WidgetConfig {
 	heatmapIntensityField?: string; // Optional numeric field to calculate heatmap cell intensity instead of just count
 	trueLabel?: string;
 	falseLabel?: string;
+	spreadDateRange?: boolean;
+	rangeStartField?: string;
+	rangeEndField?: string;
 }
 
 // ─── Drilldown Card View Config ───────────────────────────────────────────────
@@ -95,8 +98,11 @@ export interface NoteDetailConfig {
 	highlightFields?: string[]; // Selected highlight fields (max 8)
 	linksPosition?: 'cover' | 'topbar'; // 'cover' (under cover poster) or 'topbar' (topbar dropdown menu)
 	customLinks?: CustomLinkConfig[];   // Custom title & icon mappings for external links
+	creatorField?: string;      // Custom property for creator/author/artist subtitle badge
+	dateBadgeField?: string;    // Custom property for date/year subtitle badge
 	ratingField?: string;       // Custom rating property name (e.g. "onlineRating", "rating", "score")
 	ratingScale?: 'auto' | '5' | '10' | '100' | 'none'; // Max rating scale (/5, /10, /100, auto, or none)
+	durationFields?: string[];  // Property names to display as hours instead of raw minutes
 }
 
 // ─── Collection Configuration ────────────────────────────────────────────────
@@ -175,6 +181,7 @@ export interface RawRecord {
 	filePath: string;
 	title: string;
 	fields: Record<string, unknown>;
+	prorationFactor?: number;
 }
 
 /** Frequency distribution: [label, count][] sorted descending */

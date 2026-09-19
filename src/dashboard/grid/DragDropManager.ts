@@ -11,8 +11,8 @@ export class DragDropManager {
 		this.lastDragTime = Date.now();
 		if (this.autoScrollRaf) return;
 		const loop = () => {
-			// Automatically stop RAF loop if no drag activity received in 500ms (e.g. drag cancelled/aborted)
-			if (Date.now() - this.lastDragTime > 500) {
+			// Automatically stop RAF loop if no drag activity received in 500ms or container is detached
+			if (Date.now() - this.lastDragTime > 500 || !this.containerEl.isConnected) {
 				this.stopAutoScroll();
 				return;
 			}

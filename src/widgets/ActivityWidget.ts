@@ -25,10 +25,15 @@ export function renderActivityWidget(params: {
 	onDrilldown?: (filterValue: string | null) => void;
 	onSave?: () => Promise<void>;
 }): void {
-	const { el, records, config, charts, cssVar, collectionColor, colorTheme, onDrilldown, onSave } = params;
+	const { el, records, config, charts, cssVar, collectionColor, colorTheme, year, onDrilldown, onSave } = params;
 	const dateField = config.field;
+	const rangeOptions = {
+		spreadDateRange: config.spreadDateRange,
+		rangeStartField: config.rangeStartField,
+		rangeEndField: config.rangeEndField,
+	};
 
-	const data = GenericAggregator.activity(records, dateField);
+	const data = GenericAggregator.activity(records, dateField, rangeOptions, year);
 	const hasData = [...data.monthly, ...data.weekly, ...Object.values(data.yearly)].some(v => v > 0);
 
 	if (!hasData) {
@@ -162,6 +167,7 @@ export function renderActivityWidget(params: {
 
 	labelEl.onclick = (e) => {
 		e.stopPropagation();
+		if (!labelEl.isConnected) return;
 		const menu = new Menu();
 		(['Weekly', 'Monthly', 'Yearly'] as Resolution[]).forEach(res => {
 			menu.addItem(item => {
