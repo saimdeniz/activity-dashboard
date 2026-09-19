@@ -4,22 +4,22 @@ import { extractDate } from '../utils/dateUtils';
 
 
 /** Resolves start and end dates from frontmatter using collection config or standard property names */
-function getRecordDates(fm: Record<string, any>, config: CollectionConfig): { dStart: Date | null; dEnd: Date | null } {
-	let startVal = config.startDateField ? fm[config.startDateField] : undefined;
-	let endVal = config.endDateField ? fm[config.endDateField] : undefined;
+function getRecordDates(fm: Record<string, unknown>, config: CollectionConfig): { dStart: Date | null; dEnd: Date | null } {
+	let startVal: unknown = config.startDateField ? fm[config.startDateField] : undefined;
+	let endVal: unknown = config.endDateField ? fm[config.endDateField] : undefined;
 
 	if (startVal === undefined) {
-		startVal = fm.startDate ?? fm.started ?? fm.firstPlayed ?? fm.start_date;
+		startVal = fm['startDate'] ?? fm['started'] ?? fm['firstPlayed'] ?? fm['start_date'];
 	}
 	if (endVal === undefined) {
-		endVal = fm.endDate ?? fm.finished ?? fm.lastPlayed ?? fm.end_date;
+		endVal = fm['endDate'] ?? fm['finished'] ?? fm['lastPlayed'] ?? fm['end_date'];
 	}
 
 	const dStart = startVal ? extractDate(startVal) : null;
 	const dEnd = endVal ? extractDate(endVal) : null;
 
 	if (!dStart && !dEnd) {
-		const singleVal = fm.date ?? fm.completed ?? fm.released;
+		const singleVal: unknown = fm['date'] ?? fm['completed'] ?? fm['released'];
 		const dSingle = singleVal ? extractDate(singleVal) : null;
 		return { dStart: dSingle, dEnd: dSingle };
 	}
@@ -54,7 +54,7 @@ export class CollectionReader {
 		const records: RawRecord[] = [];
 
 		for (const file of files) {
-			const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
+			const fm: Record<string, unknown> | undefined = this.app.metadataCache.getFileCache(file)?.frontmatter;
 			if (!fm) continue;
 
 			let prorationFactor = 1;
@@ -149,7 +149,7 @@ export class CollectionReader {
 
 			records.push({
 				filePath: file.path,
-				title: String(fm.title ?? file.basename).trim(),
+				title: String(fm['title'] ?? file.basename).trim(),
 				fields,
 				prorationFactor: prorationFactor < 1 ? prorationFactor : undefined,
 			});
